@@ -26,3 +26,13 @@ To convert markdown pages to html ones, just:
 ```
  python3 dyi-page.py
 ```
+
+# TODO
+Entries should be sorted:
+- by time
+- by name?
+- by tag/category?
+
+Sections (directories) within blog-md should be supported.
+
+Add rss generation.
