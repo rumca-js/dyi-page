@@ -12,14 +12,19 @@ There are three directories that are relevant:
 - blog-html Output directory, where HTML files are generated.
 - blog-template Templates directory
 
-To create a page within the entry:
+To create a new section for pages (a new directory for pages):
+```
+ python3 dyi-page.py -s "section name"
+```
+
+To create a page:
 ```
  python3 dyi-page.py -p "page name"
 ```
 
-To create a new section for pages (a new directory for pages):
+To create a page for a section:
 ```
- python3 dyi-page.py -s "section name"
+ python3 dyi-page.py -p "page name" -s "section name"
 ```
 
 To convert markdown pages to html ones, just:
