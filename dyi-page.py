@@ -209,7 +209,10 @@ def generate_new_section(section_name):
 
 
 def generate_new_page(page_name, section_name = None):
-    dst_dir = os.path.join(markdown_dir, section_name)
+    if section_name:
+        dst_dir = os.path.join(markdown_dir, section_name)
+    else:
+        dst_dir = markdown_dir
 
     if not os.path.isdir(dst_dir):
         os.makedirs(dst_dir)
