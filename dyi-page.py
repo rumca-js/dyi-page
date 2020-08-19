@@ -1,6 +1,6 @@
 """
-@name MarkdownPagesFramework
-@author Piotr Zieliński
+@name DYI-page
+@author rozbujnik
 @e-mail rozbujnik@gmail.com
 
 @description
@@ -20,6 +20,7 @@ import argparse
 
 html_dir = "blog-html"
 markdown_dir = "blog-md"
+template_dir = "blog-template"
 
 
 class Pandoc(object):
@@ -55,32 +56,29 @@ class MdFile(object):
                 return self._data[wh1+len(variable_name+variable_delim):wh2]
 
 
-class IndexFile(object):
+class MdFileIndex(object):
 
     def __init__(self, index_file_name, mdfiles):
         self.index_file_name = index_file_name
+        self.mdfiles = mdfiles
+        self.htmls = [x.replace(".md", ".html").replace(markdown_dir+"/", "") for x in mdfiles]
 
-        htmls = [x.replace(".md", ".html").replace(markdown_dir+"/", "") for x in mdfiles]
-
+    def write(self):
         template_data = self.read_template()
         dynamic_data = ""
 
-        with open(index_file_name, 'w') as bigfile:
+        with open(self.index_file_name, 'w') as bigfile:
 
-            for key, mdfile in enumerate(mdfiles):
+            for key, mdfile in enumerate(self.mdfiles):
                 if mdfile.find("index") == -1:
                     mdobj = MdFile(mdfile)
                     title = mdobj.get_header_var("title")
                     updated = mdobj.get_header_var("date")
-                    dynamic_data += "[{0}](./{1}/{2})\t{3}\n\n".format(title, html_dir, htmls[key], updated)
+                    dynamic_data += "[{0}](./{1})\t{2}\n\n".format(title, self.htmls[key], updated)
 
             template_data = template_data.replace("${FILE_ENTRIES}", dynamic_data)
 
             bigfile.write(template_data)
-
-    def redistribute(self):
-        pan = Pandoc(self.index_file_name, "index.html")
-        pan.convert()
 
     def read_template(self):
         template_index_file = self.index_file_name + ".template"
@@ -91,26 +89,55 @@ class IndexFile(object):
         return ""
 
 
-def convert():
-    logging.info("Converting pages")
+def generate_index(dir_to_process):
+    mdfiles = glob.glob(dir_to_process+"/*.md")
 
-    files = os.listdir(markdown_dir)
+    index_file = MdFileIndex( os.path.join(dir_to_process, 'index.md') , mdfiles)
+    index_file.write()
 
-    mdfiles = [os.path.join('./', markdown_dir, x) for x in files]
 
-    index_file = IndexFile('./{0}/index.md'.format(markdown_dir), mdfiles)
+def generate_html_path(dir_to_process):
+    dir_to_process = dir_to_process.replace(markdown_dir, html_dir)
+    if not os.path.isdir(dir_to_process):
+        os.makedirs(dir_to_process)
 
-    files = glob.glob(markdown_dir+"/*.md")
 
-    for mdfile in files:
-        fname_only = os.path.splitext(mdfile)[0]
-        htmlfile = fname_only.replace(markdown_dir, html_dir) + ".html"
+def process_file(afile):
+    if afile.endswith(".md"):
+        fname_only = afile[:-3]
+        mdfile = afile
+        htmlfile = fname_only.replace(markdown_dir, html_dir)+".html"
         logging.info("Converting {0} to {1}".format(mdfile, htmlfile))
 
         pan = Pandoc(mdfile, htmlfile)
         pan.convert()
 
-    index_file.redistribute()
+    elif afile.endswith(".template"):
+        pass
+
+    else:
+        dst_file = afile.replace(markdown_dir, html_dir)
+        shutil.copy(afile, dst_file)
+
+
+def convert():
+    # TODO walk over markdown directory and process all directories
+
+    shutil.rmtree(html_dir)
+    os.makedirs(html_dir)
+
+    generate_index(markdown_dir)
+    #generate_htmls_for_dir(markdown_dir)
+
+    for root, dirs, files in os.walk(markdown_dir):
+        for adir in dirs:
+            generate_index( os.path.join(root, adir))
+            generate_html_path( os.path.join(root, adir))
+
+        files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
+        for afile in files:
+            process_file( os.path.join(root, afile))
+            #generate_htmls_for_dir(os.path.join(root, adir))
 
 
 def read_arguments():
@@ -124,18 +151,40 @@ def read_arguments():
 
 
 def generate_new_section(section_name):
-    logging.info("Generate new section")
+    dst_dir = os.path.join( markdown_dir, section_name)
+
+    if os.path.isdir(dst_dir):
+        logging.info("Directory already exists: {0}".format(dst_dir))
+        return
+
+    os.makedirs(dst_dir)
+
+    shutil.copy( os.path.join(template_dir, 'index.md.template'), dst_dir)
+    shutil.copy( os.path.join(template_dir, 'pandoc.css'), dst_dir)
 
 
-def generate_new_page(page_name):
-    logging.info("Generate new page")
+def generate_new_page(page_name, section_name = None):
+    dst_dir = os.path.join(markdown_dir, section_name)
+
+    if not os.path.isdir(dst_dir):
+        os.makedirs(dst_dir)
+
+    shutil.copy( os.path.join(template_dir, 'page.md'), os.path.join(dst_dir))
+
+    if not page_name.endswith(".md"):
+        page_name = page_name+".md"
+
+    os.rename( os.path.join(dst_dir, 'page.md'), os.path.join(dst_dir, page_name))
 
 
 def main():
     parser, args = read_arguments()
 
     if args.generate_new_section:
-        generate_new_section(args.generate_new_section)
+        if args.generate_new_page:
+            generate_new_page(args.generate_new_page, args.generate_new_section)
+        else:
+            generate_new_section(args.generate_new_section)
 
     elif args.generate_new_page:
         generate_new_page(args.generate_new_page)
