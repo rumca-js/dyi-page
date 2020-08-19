@@ -33,6 +33,4 @@ Entries should be sorted:
 - by name?
 - by tag/category?
 
-Sections (directories) within blog-md should be supported.
-
 Add rss generation.
