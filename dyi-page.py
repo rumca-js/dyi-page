@@ -42,6 +42,8 @@ class MdFile(object):
             self._data = fh.read()
 
     def get_header_var(self, variable_name):
+        # TODO add support for lists
+
         variable_delim = ":"
         wh1 = self._data.find(variable_name + variable_delim)
         if wh1 != -1:
@@ -56,32 +58,76 @@ class MdFile(object):
                 return self._data[wh1+len(variable_name+variable_delim):wh2]
 
 
-class MdFileIndex(object):
+    def get_file_name(self):
+        return self._mdfile
 
-    def __init__(self, index_file_name, mdfiles):
-        self.index_file_name = index_file_name
+    def get_html_file_name(self):
+        file_name_only = self._mdfile[:-3]
+        htmlfile = file_name_only.replace(markdown_dir, html_dir)+".html"
+        return htmlfile
+
+    def is_index(self):
+        if self.get_file_name().find("index") == -1:
+            return False
+
+        return True
+
+
+class MdFileTemplate(object):
+
+    def __init__(self, template_file_name, mdfiles):
+        self.template_file_name = template_file_name
+        self.get_destination_name()
+
+        self.set_html_file_names(mdfiles)
+        self.read_pages()
+        self.sort_pages()
+
+        self.establish_variables()
+
+    def get_destination_name(self):
+        self.md_file_name = self.template_file_name[:self.template_file_name.find(".template")]
+        return self.md_file_name
+
+    def set_html_file_names(self, mdfiles):
         self.mdfiles = mdfiles
-        self.htmls = [x.replace(".md", ".html").replace(markdown_dir+"/", "") for x in mdfiles]
+        #self.htmls = [x.replace(".md", ".html").replace(markdown_dir+"/", "") for x in mdfiles]
+
+    def read_pages(self):
+        self.pages = []
+        for key, mdfile in enumerate(self.mdfiles):
+            mdobj = MdFile(mdfile)
+            if not mdobj.is_index():
+                self.pages.append(mdobj)
+
+    def sort_pages(self):
+        self.pages = sorted(self.pages, key = lambda x : x.get_header_var('date'), reverse = True)
+
+    def establish_variables(self):
+
+        self.vars = {}
+
+        file_entries = ""
+        for key, mdobj in enumerate(self.pages):
+            if not mdobj.is_index():
+                title = mdobj.get_header_var("title")
+                updated = mdobj.get_header_var("date")
+
+                html_file_name = os.path.split(mdobj.get_html_file_name())[1]
+
+                file_entries += "[{0}](./{1})\t{2}\n\n".format(title, html_file_name, updated)
+
+        self.vars["${FILE_ENTRIES}"] = file_entries
 
     def write(self):
         template_data = self.read_template()
-        dynamic_data = ""
 
-        with open(self.index_file_name, 'w') as bigfile:
-
-            for key, mdfile in enumerate(self.mdfiles):
-                if mdfile.find("index") == -1:
-                    mdobj = MdFile(mdfile)
-                    title = mdobj.get_header_var("title")
-                    updated = mdobj.get_header_var("date")
-                    dynamic_data += "[{0}](./{1})\t{2}\n\n".format(title, self.htmls[key], updated)
-
-            template_data = template_data.replace("${FILE_ENTRIES}", dynamic_data)
-
+        with open(self.md_file_name, 'w') as bigfile:
+            template_data = template_data.replace("${FILE_ENTRIES}", self.vars["${FILE_ENTRIES}"])
             bigfile.write(template_data)
 
     def read_template(self):
-        template_index_file = self.index_file_name + ".template"
+        template_index_file = self.template_file_name
         if os.path.isfile(template_index_file):
             with open(template_index_file, 'r') as fh:
                 return fh.read()
@@ -89,11 +135,14 @@ class MdFileIndex(object):
         return ""
 
 
-def generate_index(dir_to_process):
+def process_directory(dir_to_process):
     mdfiles = glob.glob(dir_to_process+"/*.md")
 
-    index_file = MdFileIndex( os.path.join(dir_to_process, 'index.md') , mdfiles)
-    index_file.write()
+    templates = glob.glob(dir_to_process+"/*.template")
+
+    for atemplate in templates:
+        templ = MdFileTemplate(atemplate, mdfiles)
+        templ.write()
 
 
 def generate_html_path(dir_to_process):
@@ -104,9 +153,9 @@ def generate_html_path(dir_to_process):
 
 def process_file(afile):
     if afile.endswith(".md"):
-        fname_only = afile[:-3]
         mdfile = afile
-        htmlfile = fname_only.replace(markdown_dir, html_dir)+".html"
+        mdobj = MdFile(mdfile)
+        htmlfile = mdobj.get_html_file_name()
         logging.info("Converting {0} to {1}".format(mdfile, htmlfile))
 
         pan = Pandoc(mdfile, htmlfile)
@@ -121,23 +170,19 @@ def process_file(afile):
 
 
 def convert():
-    # TODO walk over markdown directory and process all directories
-
     shutil.rmtree(html_dir)
     os.makedirs(html_dir)
 
-    generate_index(markdown_dir)
-    #generate_htmls_for_dir(markdown_dir)
+    process_directory(markdown_dir)
 
     for root, dirs, files in os.walk(markdown_dir):
         for adir in dirs:
-            generate_index( os.path.join(root, adir))
+            process_directory( os.path.join(root, adir))
             generate_html_path( os.path.join(root, adir))
 
         files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
         for afile in files:
             process_file( os.path.join(root, afile))
-            #generate_htmls_for_dir(os.path.join(root, adir))
 
 
 def read_arguments():
@@ -194,8 +239,5 @@ def main():
 
 
 if __name__ == "__main__":
-    #FORMAT = '%(asctime)-15s %(clientip)s %(user)-8s %(message)s'
-    logging.basicConfig(level=logging.INFO) #, format=FORMAT)
-
-    # execute only if run as a script
+    logging.basicConfig(level=logging.INFO)
     main()
