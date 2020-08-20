@@ -5,7 +5,11 @@ This is a python markdown page framework generation called 'DYI Page'.
 
 It is similar in principle to Hugo, or Jeckyll.
 
+# Prerequisites
+
 The program uses pandoc to generate entries. It has to be installed on the target machine.
+
+# Functionality
 
 There are three directories that are relevant:
 - blog-md Source directory. Contains markdown files.
@@ -16,6 +20,8 @@ Entries from blog-md are processed, and:
 - if this is .md file then HTML is generated for it
 - if this is .template file, then first .md is generated from it, then HTML is generated for the .md file
 - otherwise the file is copied to the HTML output directory
+
+# CLI
 
 To create a new section for pages (a new directory for pages):
 ```
