@@ -16,11 +16,14 @@ import shutil
 import glob
 import logging
 import argparse
+import zipfile
+import datetime
 
 
 html_dir = "blog-html"
 markdown_dir = "blog-md"
 template_dir = "blog-template"
+backup_dir = 'backup'
 
 
 class Pandoc(object):
@@ -189,6 +192,7 @@ def read_arguments():
     parser = argparse.ArgumentParser(description='DYI Page generator.')
     parser.add_argument('-p', '--page', dest='generate_new_page', help='Generates new page with the specified name')
     parser.add_argument('-s', '--section', dest='generate_new_section', help='Generates new section with the specified name')
+    parser.add_argument('-b', '--backup', dest='generate_backup', action="store_true", help='Generates backup file')
 
     args = parser.parse_args()
 
@@ -225,6 +229,28 @@ def generate_new_page(page_name, section_name = None):
     os.rename( os.path.join(dst_dir, 'page.md'), os.path.join(dst_dir, page_name))
 
 
+def generate_backup():
+    date = datetime.datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
+
+    zip_file_name = os.path.join(backup_dir, date+'_backup.zip')
+
+    ziph = zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED)
+
+    for root, dirs, files in os.walk(markdown_dir):
+        for afile in files:
+            ziph.write(os.path.join(root, afile))
+
+    for root, dirs, files in os.walk(html_dir):
+        for afile in files:
+            ziph.write(os.path.join(root, afile))
+
+    for root, dirs, files in os.walk(template_dir):
+        for afile in files:
+            ziph.write(os.path.join(root, afile))
+
+    ziph.close()
+
+
 def main():
     parser, args = read_arguments()
 
@@ -236,6 +262,9 @@ def main():
 
     elif args.generate_new_page:
         generate_new_page(args.generate_new_page)
+
+    elif args.generate_backup:
+        generate_backup()
 
     else:
         convert()
