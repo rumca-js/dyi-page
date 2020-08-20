@@ -8,9 +8,14 @@ It is similar in principle to Hugo, or Jeckyll.
 The program uses pandoc to generate entries. It has to be installed on the target machine.
 
 There are three directories that are relevant:
-- blog-md Markdown files directory.
-- blog-html Output directory, where HTML files are generated.
-- blog-template Templates directory
+- blog-md Source directory. Contains markdown files.
+- blog-html Output directory. Contains output HTML files.
+- blog-template Template files directory.
+
+Entries from blog-md are processed, and:
+- if this is .md file then HTML is generated for it
+- if this is .template file, then first .md is generated from it, then HTML is generated for the .md file
+- otherwise the file is copied to the HTML output directory
 
 To create a new section for pages (a new directory for pages):
 ```
@@ -32,10 +37,10 @@ To convert markdown pages to html ones, just:
  python3 dyi-page.py
 ```
 
-# TODO
-Entries should be sorted:
-- by time
-- by name?
-- by tag/category?
+To generate backup file:
+```
+ python3 dyi-page.py
+```
 
+# TODO
 Add rss generation.
