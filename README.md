@@ -39,7 +39,7 @@ To convert markdown pages to html ones, just:
 
 To generate backup file:
 ```
- python3 dyi-page.py
+ python3 dyi-page.py -b
 ```
 
 # TODO
