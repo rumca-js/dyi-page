@@ -1,4 +1,4 @@
---
+---
 title: "Hello World page"
 date: 2020-08-11T21:21:49+02:00
 draft: false
@@ -11,6 +11,6 @@ categories : [
 ]
 ---
 
-[Main Page](./index.html)
+[Strona główna](./index.html)
 
 Hello World!

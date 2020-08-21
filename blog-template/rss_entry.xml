@@ -1,0 +1,9 @@
+<item>
+<title>$title$</title>
+<link>$PAGE_LINK$/$link$</link>
+<guid>$link$</guid>
+$if(description)$
+<description>$description$</description>
+$endif$
+<pubDate>$date$</pubDate>
+</item>

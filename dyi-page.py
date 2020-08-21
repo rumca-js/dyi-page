@@ -23,7 +23,26 @@ import datetime
 html_dir = "blog-html"
 markdown_dir = "blog-md"
 template_dir = "blog-template"
+rss_entries_dir = "blog-rss"
 backup_dir = 'backup'
+
+page_link = "http://myserver.com/blog-html"
+
+RSS_HEADER = """
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+
+<channel>
+<title>Hello World example site!</title>
+<link>http://myserver.com</link>
+<description>Hello World example site</description>
+<lastBuildDate>Sun, Aug 16 2020</lastBuildDate>
+"""
+
+RSS_FOOTER = """
+</channel>
+</rss>
+"""
 
 
 class Pandoc(object):
@@ -34,6 +53,11 @@ class Pandoc(object):
 
     def convert(self):
         subprocess.run(['pandoc', '-s', '-c', 'pandoc.css', self._mdfile, '-o', self._htmlfile])
+
+    def rss_generate(self):
+        rss_entry = os.path.join(template_dir, 'rss_entry.xml')
+        #subprocess.run(['pandoc','--template',rss_entry,'-V','linkprefix:prepreprepre', self._mdfile, '-o', self._htmlfile])
+        subprocess.run(['pandoc','--template',rss_entry,'-V','PAGE_LINK:'+page_link, self._mdfile, '-o', self._htmlfile])
 
 
 class MdFile(object):
@@ -187,16 +211,7 @@ def convert():
         for afile in files:
             process_file( os.path.join(root, afile))
 
-
-def read_arguments():
-    parser = argparse.ArgumentParser(description='DYI Page generator.')
-    parser.add_argument('-p', '--page', dest='generate_new_page', help='Generates new page with the specified name')
-    parser.add_argument('-s', '--section', dest='generate_new_section', help='Generates new section with the specified name')
-    parser.add_argument('-b', '--backup', dest='generate_backup', action="store_true", help='Generates backup file')
-
-    args = parser.parse_args()
-
-    return parser, args
+    generate_rss()
 
 
 def generate_new_section(section_name):
@@ -248,7 +263,59 @@ def generate_backup():
         for afile in files:
             ziph.write(os.path.join(root, afile))
 
+    for root, dirs, files in os.walk(rss_entries_dir):
+        for afile in files:
+            ziph.write(os.path.join(root, afile))
+
     ziph.close()
+
+
+def generate_rss():
+    big_rss_file = os.path.join(html_dir, 'rss.xml')
+    logging.info("Generating RSS file {0}".format(big_rss_file))
+
+    files = glob.glob( os.path.join(rss_entries_dir, "*.md"))
+
+    files = sorted(files)
+
+    for afile in files:
+        pan = Pandoc( afile, afile+'.xml')
+        pan.rss_generate()
+
+    files = glob.glob( os.path.join(rss_entries_dir, "*.xml"))
+
+    files = sorted(files)
+
+    big_rss_data = RSS_HEADER
+
+    for afile in files:
+        data = ""
+        with open(afile, 'r') as fh:
+            data = fh.read()
+
+        big_rss_data += data
+
+    big_rss_data += RSS_FOOTER
+
+    with open(big_rss_file , 'w') as fh:
+        fh.write(big_rss_data)
+
+    # remove unwanted entries
+    files = glob.glob( os.path.join(rss_entries_dir, "*.xml"))
+    for afile in files:
+        os.remove(afile)
+
+
+def read_arguments():
+    parser = argparse.ArgumentParser(description='DYI Page generator.')
+    parser.add_argument('-p', '--page', dest='generate_new_page', help='Generates new page with the specified name')
+    parser.add_argument('-s', '--section', dest='generate_new_section', help='Generates new section with the specified name')
+    parser.add_argument('-b', '--backup', dest='generate_backup', action="store_true", help='Generates backup file')
+    parser.add_argument('-r', '--rss', dest='generate_rss', action="store_true", help='Generates rss file')
+
+    args = parser.parse_args()
+
+    return parser, args
 
 
 def main():
@@ -265,6 +332,9 @@ def main():
 
     elif args.generate_backup:
         generate_backup()
+
+    elif args.generate_rss:
+        generate_rss()
 
     else:
         convert()

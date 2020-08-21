@@ -1,0 +1,19 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+
+<channel>
+<title>Hello World example site!</title>
+<link>http://myserver.com</link>
+<description>Hello World example site</description>
+<lastBuildDate>Sun, Aug 16 2020</lastBuildDate>
+<item>
+<title>First RSS entry</title>
+<link>http://myserver.com/blog-html/index.html</link>
+<guid>index.html</guid>
+<description>This is my first RSS entry</description>
+<pubDate>20200821</pubDate>
+</item>
+
+</channel>
+</rss>

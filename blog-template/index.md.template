@@ -1,9 +1,17 @@
-# Example WebPage
+---
+title: "Index"
+date: 2020-08-21T15:21:49+02:00
+draft: false
+description : "Index"
+---
 
-This is a Hello World WebPage
+# Strona
 
-# Entries:
+Poświęcona jest tematyce różnorakiej.
 
+RSS: [Link](./rss.xml)
+
+# Tematy
 ${FILE_ENTRIES}
 
-# Goodbye!
+# Dziękuję za uwagę
