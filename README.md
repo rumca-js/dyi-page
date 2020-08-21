@@ -16,6 +16,7 @@ There are three directories that are relevant:
 - blog-html Output directory. Contains output HTML files.
 - blog-template Template files directory.
 - blog-rss RSS markdown entry files
+- backup The backup directory, where the backup data is placed. All the directories above are zipped and put into a backup file.
 
 Entries from blog-md are processed, and:
 - if this is .md file then HTML is generated for it
