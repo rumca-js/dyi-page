@@ -50,3 +50,9 @@ To generate backup file:
 ```
  python3 dyi-page.py -b
 ```
+
+# TODO
+create an rss template file.
+The RSS structure is baked in the python file.
+The url needs to be put into some sort of configuration file.
+It is baked into the python file as well.
