@@ -15,11 +15,14 @@ There are three directories that are relevant:
 - blog-md Source directory. Contains markdown files.
 - blog-html Output directory. Contains output HTML files.
 - blog-template Template files directory.
+- blog-rss RSS markdown entry files
 
 Entries from blog-md are processed, and:
 - if this is .md file then HTML is generated for it
 - if this is .template file, then first .md is generated from it, then HTML is generated for the .md file
 - otherwise the file is copied to the HTML output directory
+
+The rss.xml file is generated in the blog-html directory.
 
 # CLI
 
@@ -47,6 +50,3 @@ To generate backup file:
 ```
  python3 dyi-page.py -b
 ```
-
-# TODO
-Add rss generation.
