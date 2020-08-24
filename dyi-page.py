@@ -245,7 +245,7 @@ def generate_new_page(page_name, section_name = None):
 
 
 def generate_backup():
-    date = datetime.datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
+    date = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M-%S')
 
     zip_file_name = os.path.join(backup_dir, date+'_backup.zip')
 
