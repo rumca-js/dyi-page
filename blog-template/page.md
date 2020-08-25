@@ -1,6 +1,6 @@
 ---
 title: "Hello World page"
-date: 2020-08-11T21:21:49+02:00
+date: $DATETIME$
 draft: false
 description : "Hello World page"
 tags : [

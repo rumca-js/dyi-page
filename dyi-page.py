@@ -220,6 +220,10 @@ class RssFileCreator(object):
             os.remove(afile)
 
 
+def get_datetime_file_name():
+    return datetime.datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
+
+
 def process_directory(dir_to_process):
     mdfiles = glob.glob(dir_to_process+"/*.md")
 
@@ -286,6 +290,23 @@ def generate_new_section(section_name):
     shutil.copy( os.path.join(template_dir, 'pandoc.css'), dst_dir)
 
 
+def create_new_rss_entry(page_name):
+    date = get_datetime_file_name()
+    
+    rss_md_file_name = date+".md"
+
+    rss_md_template = os.path.join(template_dir, "rss_entry.md")
+
+    temp = TemplateFile(rss_md_template)
+
+    rss_destination_file = os.path.join(rss_entries_dir, rss_md_file_name)
+
+    temp.set("PAGE_ENTRY_TITLE", page_name)
+    temp.set("DESCRIPTION", "Created a new page {0}".format(page_name))
+
+    temp.write( rss_destination_file)
+
+
 def generate_new_page(page_name, section_name = None):
     if section_name:
         dst_dir = os.path.join(markdown_dir, section_name)
@@ -295,16 +316,21 @@ def generate_new_page(page_name, section_name = None):
     if not os.path.isdir(dst_dir):
         os.makedirs(dst_dir)
 
-    shutil.copy( os.path.join(template_dir, 'page.md'), os.path.join(dst_dir))
+    temp = TemplateFile(os.path.join(template_dir, 'page.md'))
 
     if not page_name.endswith(".md"):
         page_name = page_name+".md"
 
-    os.rename( os.path.join(dst_dir, 'page.md'), os.path.join(dst_dir, page_name))
+    temp.write( os.path.join(dst_dir, page_name))
+
+    if page_name.endswith(".md"):
+        page_name = page_name[:-3]
+
+    create_new_rss_entry(page_name)
 
 
 def generate_backup():
-    date = datetime.datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
+    date = get_datetime_file_name()
 
     zip_file_name = os.path.join(backup_dir, date+'_backup.zip')
 
