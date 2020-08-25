@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+
+<channel>
+<title>$PAGE_TITLE$!</title>
+<link>$PAGE_URL$</link>
+<description>$PAGE_DESCRIPTION$</description>
+<lastBuildDate>$DATETIME$</lastBuildDate>
+
+$RSS_ENTRIES$
+
+</channel>
+</rss>

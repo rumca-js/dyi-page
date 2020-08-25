@@ -1,17 +1,18 @@
 ---
-title: "Index"
-date: 2020-08-21T15:21:49+02:00
+title: "$PAGE_TITLE"
+date: $DATETIME$
 draft: false
-description : "Index"
+description : "$PAGE_TITLE$"
 ---
 
-# Strona
+# Index page
 
-Poświęcona jest tematyce różnorakiej.
+This is a index page.
 
 RSS: [Link](./rss.xml)
 
-# Tematy
-${FILE_ENTRIES}
+# Subjects
 
-# Dziękuję za uwagę
+$FILE_ENTRIES$
+
+# Thank you

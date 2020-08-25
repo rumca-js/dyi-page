@@ -26,23 +26,14 @@ template_dir = "blog-template"
 rss_entries_dir = "blog-rss"
 backup_dir = 'backup'
 
-page_link = "http://myserver.com/blog-html"
 
-RSS_HEADER = """
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0">
+class Configuration(object):
 
-<channel>
-<title>Hello World example site!</title>
-<link>http://myserver.com</link>
-<description>Hello World example site</description>
-<lastBuildDate>Sun, Aug 16 2020</lastBuildDate>
-"""
-
-RSS_FOOTER = """
-</channel>
-</rss>
-"""
+    def __init__(self):
+        self.page_url = "http://myserver.com/blog-html"
+        self.page_title = "DYI - blog"
+        self.page_description = 'Page description'
+        self.page_update_datetime = "Sun, Aug 16 2020"
 
 
 class Pandoc(object):
@@ -56,8 +47,10 @@ class Pandoc(object):
 
     def rss_generate(self):
         rss_entry = os.path.join(template_dir, 'rss_entry.xml')
-        #subprocess.run(['pandoc','--template',rss_entry,'-V','linkprefix:prepreprepre', self._mdfile, '-o', self._htmlfile])
-        subprocess.run(['pandoc','--template',rss_entry,'-V','PAGE_LINK:'+page_link, self._mdfile, '-o', self._htmlfile])
+
+        config = Configuration()
+
+        subprocess.run(['pandoc','--template',rss_entry,'-V','PAGE_LINK:'+config.page_url, self._mdfile, '-o', self._htmlfile])
 
 
 class MdFile(object):
@@ -100,25 +93,54 @@ class MdFile(object):
         return True
 
 
-class MdFileTemplate(object):
+class TemplateFile(object):
+
+    def __init__(self, template_name):
+        self.template_name = template_name
+
+        self.keys = {}
+
+        config = Configuration()
+
+        self.keys["PAGE_TITLE"] = config.page_title
+        self.keys["PAGE_URL"] = config.page_url
+        self.keys["PAGE_DESCRIPTION"] = config.page_description
+        self.keys["PAGE_UPDATE_DATETIME"] = config.page_update_datetime
+        self.keys["DATETIME"] = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+        self.keys["DATE"] = datetime.datetime.today().strftime('%Y-%m-%d')
+        self.keys["TIME"] = datetime.datetime.today().strftime('%H:%M:%S')
+
+    def write(self, new_file_name):
+        data = ""
+        with open(self.template_name, 'r') as fh:
+            data = fh.read()
+
+        for key in self.keys:
+            data = data.replace("${0}$".format(key), self.keys[key])
+
+        with open(new_file_name, 'w') as fh:
+            fh.write(data)
+
+    def set(self, key, value):
+        self.keys[key] = value
+
+
+class MdFileTemplate(TemplateFile):
 
     def __init__(self, template_file_name, mdfiles):
-        self.template_file_name = template_file_name
+        super().__init__(template_file_name)
+
         self.get_destination_name()
 
-        self.set_html_file_names(mdfiles)
+        self.mdfiles = mdfiles
         self.read_pages()
         self.sort_pages()
 
         self.establish_variables()
 
     def get_destination_name(self):
-        self.md_file_name = self.template_file_name[:self.template_file_name.find(".template")]
+        self.md_file_name = self.template_name[:self.template_name.find(".template")]
         return self.md_file_name
-
-    def set_html_file_names(self, mdfiles):
-        self.mdfiles = mdfiles
-        #self.htmls = [x.replace(".md", ".html").replace(markdown_dir+"/", "") for x in mdfiles]
 
     def read_pages(self):
         self.pages = []
@@ -128,11 +150,11 @@ class MdFileTemplate(object):
                 self.pages.append(mdobj)
 
     def sort_pages(self):
-        self.pages = sorted(self.pages, key = lambda x : x.get_header_var('date'), reverse = True)
+        self.pages = sorted(self.pages, 
+                key = lambda x : (x.get_header_var('date'), x.get_header_var('title') ), 
+                reverse = True)
 
     def establish_variables(self):
-
-        self.vars = {}
 
         file_entries = ""
         for key, mdobj in enumerate(self.pages):
@@ -144,22 +166,58 @@ class MdFileTemplate(object):
 
                 file_entries += "[{0}](./{1})\t{2}\n\n".format(title, html_file_name, updated)
 
-        self.vars["${FILE_ENTRIES}"] = file_entries
+        self.keys["FILE_ENTRIES"] = file_entries
 
-    def write(self):
-        template_data = self.read_template()
 
-        with open(self.md_file_name, 'w') as bigfile:
-            template_data = template_data.replace("${FILE_ENTRIES}", self.vars["${FILE_ENTRIES}"])
-            bigfile.write(template_data)
+class RssFileCreator(object):
 
-    def read_template(self):
-        template_index_file = self.template_file_name
-        if os.path.isfile(template_index_file):
-            with open(template_index_file, 'r') as fh:
-                return fh.read()
+    def create_rss_file(self, file_name):
+        big_rss_file = os.path.join(html_dir, file_name)
 
-        return ""
+        logging.info("Generating RSS file {0}".format(big_rss_file))
+
+        md_rss_files = self.get_md_entries()
+
+        xml_rss_files = self.create_xml_rss_entries(md_rss_files)
+
+        xml_rss_files = self.get_xml_entries()
+        xml_rss_files = sorted(xml_rss_files)
+
+        rss_entries_data = self.get_xml_rss_entries_data(xml_rss_files)
+
+        big_rss_template = os.path.join(template_dir, "rss_main.template")
+        temp = TemplateFile(big_rss_template)
+        temp.set("RSS_ENTRIES", rss_entries_data)
+
+        temp.write(big_rss_file)
+
+        self.remove_xml_entries()
+
+    def get_md_entries(self):
+        return glob.glob( os.path.join(rss_entries_dir, "*.md"))
+
+    def get_xml_entries(self):
+        return glob.glob( os.path.join(rss_entries_dir, "*.xml"))
+
+    def get_xml_rss_entries_data(self, xml_rss_files):
+        rss_entries_data = ""
+        for xml_file in xml_rss_files:
+            with open(xml_file, 'r') as fh:
+                rss_entries_data += fh.read()
+        return rss_entries_data
+
+    def create_xml_rss_entries(self, files):
+        files = sorted(files)
+
+        for afile in files:
+            pan = Pandoc( afile, afile+'.xml')
+            pan.rss_generate()
+
+    def remove_xml_entries(self):
+        # remove unwanted entries XML entries
+        files = glob.glob( os.path.join(rss_entries_dir, "*.xml"))
+        for afile in files:
+            os.remove(afile)
 
 
 def process_directory(dir_to_process):
@@ -169,7 +227,7 @@ def process_directory(dir_to_process):
 
     for atemplate in templates:
         templ = MdFileTemplate(atemplate, mdfiles)
-        templ.write()
+        templ.write(templ.get_destination_name() )
 
 
 def generate_html_path(dir_to_process):
@@ -211,7 +269,8 @@ def convert():
         for afile in files:
             process_file( os.path.join(root, afile))
 
-    generate_rss()
+    rss = RssFileCreator()
+    rss.create_rss_file("rss.xml")
 
 
 def generate_new_section(section_name):
@@ -245,7 +304,7 @@ def generate_new_page(page_name, section_name = None):
 
 
 def generate_backup():
-    date = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M-%S')
+    date = datetime.datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
 
     zip_file_name = os.path.join(backup_dir, date+'_backup.zip')
 
@@ -268,42 +327,6 @@ def generate_backup():
             ziph.write(os.path.join(root, afile))
 
     ziph.close()
-
-
-def generate_rss():
-    big_rss_file = os.path.join(html_dir, 'rss.xml')
-    logging.info("Generating RSS file {0}".format(big_rss_file))
-
-    files = glob.glob( os.path.join(rss_entries_dir, "*.md"))
-
-    files = sorted(files)
-
-    for afile in files:
-        pan = Pandoc( afile, afile+'.xml')
-        pan.rss_generate()
-
-    files = glob.glob( os.path.join(rss_entries_dir, "*.xml"))
-
-    files = sorted(files)
-
-    big_rss_data = RSS_HEADER
-
-    for afile in files:
-        data = ""
-        with open(afile, 'r') as fh:
-            data = fh.read()
-
-        big_rss_data += data
-
-    big_rss_data += RSS_FOOTER
-
-    with open(big_rss_file , 'w') as fh:
-        fh.write(big_rss_data)
-
-    # remove unwanted entries
-    files = glob.glob( os.path.join(rss_entries_dir, "*.xml"))
-    for afile in files:
-        os.remove(afile)
 
 
 def read_arguments():
@@ -334,7 +357,8 @@ def main():
         generate_backup()
 
     elif args.generate_rss:
-        generate_rss()
+        rss = RssFileCreator()
+        rss.create_rss_file("rss.xml")
 
     else:
         convert()

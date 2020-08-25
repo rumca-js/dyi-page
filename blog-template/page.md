@@ -11,6 +11,6 @@ categories : [
 ]
 ---
 
-[Strona główna](./index.html)
+[Index Page](./index.html)
 
 Hello World!
