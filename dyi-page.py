@@ -30,9 +30,9 @@ backup_dir = 'backup'
 class Configuration(object):
 
     def __init__(self):
-        self.page_url = "http://myserver.com/blog-html"
-        self.page_title = "DYI - blog"
-        self.page_description = 'Page description'
+        self.page_url = "http://wubudubu.site/blog-html"
+        self.page_title = "Wubudubu - blog"
+        self.page_description = 'Strona poświęcona tematom różnorakim'
         self.page_update_datetime = "Sun, Aug 16 2020"
 
 
@@ -46,7 +46,7 @@ class Pandoc(object):
         subprocess.run(['pandoc', '-s', '-c', 'pandoc.css', self._mdfile, '-o', self._htmlfile])
 
     def rss_generate(self):
-        rss_entry = os.path.join(template_dir, 'rss_entry.xml')
+        rss_entry = os.path.join(template_dir, 'rss_entry.xml.template')
 
         config = Configuration()
 
@@ -127,12 +127,14 @@ class TemplateFile(object):
 
 class MdFileTemplate(TemplateFile):
 
-    def __init__(self, template_file_name, mdfiles):
+    def __init__(self, template_file_name, mdfiles, mddirs):
         super().__init__(template_file_name)
 
         self.get_destination_name()
 
         self.mdfiles = mdfiles
+        self.mddirs = mddirs
+
         self.read_pages()
         self.sort_pages()
 
@@ -167,6 +169,17 @@ class MdFileTemplate(TemplateFile):
                 file_entries += "[{0}](./{1})\t{2}\n\n".format(title, html_file_name, updated)
 
         self.keys["FILE_ENTRIES"] = file_entries
+
+        dir_entries = ""
+        for adir in self.mddirs:
+            title = adir
+            if title.find("md_") == 0:
+                title = title[3:]
+
+            html_file_name = os.path.join(adir, "index.html")
+            dir_entries += "[{0}](./{1})\n\n".format(title, html_file_name)
+
+        self.keys["DIR_ENTRIES"] = dir_entries
 
 
 class RssFileCreator(object):
@@ -226,11 +239,14 @@ def get_datetime_file_name():
 
 def process_directory(dir_to_process):
     mdfiles = glob.glob(dir_to_process+"/*.md")
+    mddirs = glob.glob(dir_to_process+"/md_*")
 
     templates = glob.glob(dir_to_process+"/*.template")
 
+    mddirs = [x.replace(dir_to_process+"/","") for x in mddirs]
+
     for atemplate in templates:
-        templ = MdFileTemplate(atemplate, mdfiles)
+        templ = MdFileTemplate(atemplate, mdfiles, mddirs)
         templ.write(templ.get_destination_name() )
 
 
@@ -278,6 +294,9 @@ def convert():
 
 
 def generate_new_section(section_name):
+    if not section_name.find("md_") == 0:
+        section_name = "md_"+section_name
+
     dst_dir = os.path.join( markdown_dir, section_name)
 
     if os.path.isdir(dst_dir):
@@ -295,7 +314,7 @@ def create_new_rss_entry(page_name):
     
     rss_md_file_name = date+".md"
 
-    rss_md_template = os.path.join(template_dir, "rss_entry.md")
+    rss_md_template = os.path.join(template_dir, "rss_entry.md.template")
 
     temp = TemplateFile(rss_md_template)
 
@@ -316,7 +335,7 @@ def generate_new_page(page_name, section_name = None):
     if not os.path.isdir(dst_dir):
         os.makedirs(dst_dir)
 
-    temp = TemplateFile(os.path.join(template_dir, 'page.md'))
+    temp = TemplateFile(os.path.join(template_dir, 'page.md.template'))
 
     if not page_name.endswith(".md"):
         page_name = page_name+".md"
