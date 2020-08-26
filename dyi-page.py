@@ -30,10 +30,10 @@ backup_dir = 'backup'
 class Configuration(object):
 
     def __init__(self):
-        self.page_url = "http://wubudubu.site/blog-html"
-        self.page_title = "Wubudubu - blog"
-        self.page_description = 'Strona poświęcona tematom różnorakim'
-        self.page_update_datetime = "Sun, Aug 16 2020"
+        self.page_url = "http://myserver.com/blog-html"
+        self.page_title = "My Blog"
+        self.page_description = 'Blog description'
+        self.page_update_datetime = "Update time"
 
 
 class Pandoc(object):
