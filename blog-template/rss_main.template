@@ -5,7 +5,7 @@
 <title>$PAGE_TITLE$!</title>
 <link>$PAGE_URL$</link>
 <description>$PAGE_DESCRIPTION$</description>
-<lastBuildDate>$DATETIME$</lastBuildDate>
+<lastBuildDate>$PAGE_DATE$</lastBuildDate>
 
 $RSS_ENTRIES$
 

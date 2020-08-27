@@ -1,5 +1,5 @@
 <item>
-<title>$PAGE_TITLE$</title>
+<title>$title$</title>
 <link>$PAGE_URL$/$link$</link>
 <guid>$link$</guid>
 $if(description)$

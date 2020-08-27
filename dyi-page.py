@@ -46,11 +46,16 @@ class Pandoc(object):
         subprocess.run(['pandoc', '-s', '-c', 'pandoc.css', self._mdfile, '-o', self._htmlfile])
 
     def rss_generate(self):
-        rss_entry = os.path.join(template_dir, 'rss_entry.xml.template')
+
+        rss_entry = os.path.join(rss_entries_dir, 'rss_entry.xml.template')
+
+        templ = TemplateFile( os.path.join(template_dir, 'rss_entry.xml.template'))
+        templ.write(rss_entry)
 
         config = Configuration()
 
-        subprocess.run(['pandoc','--template',rss_entry,'-V','PAGE_LINK:'+config.page_url, self._mdfile, '-o', self._htmlfile])
+        #subprocess.run(['pandoc','--template',rss_entry,'-V','PAGE_LINK:'+config.page_url, self._mdfile, '-o', self._htmlfile])
+        subprocess.run(['pandoc','--template',rss_entry, self._mdfile, '-o', self._htmlfile])
 
 
 class MdFile(object):
