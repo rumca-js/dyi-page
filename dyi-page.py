@@ -18,6 +18,7 @@ import logging
 import argparse
 import zipfile
 import datetime
+import configparser
 
 
 html_dir = "blog-html"
@@ -30,10 +31,43 @@ backup_dir = 'backup'
 class Configuration(object):
 
     def __init__(self):
-        self.page_url = "http://myserver.com/blog-html"
-        self.page_title = "My Blog"
-        self.page_description = 'Blog description'
-        self.page_update_datetime = "Update time"
+
+        self.config_file = "page_config.ini"
+
+        if self.exists():
+            self.read_config_file()
+        else:
+            self.page_url = "http://myserver.com/blog-html"
+            self.page_title = "myserver - blog"
+            self.page_description = 'myserver is a fun place to be'
+            self.page_update_datetime = "Sun, Aug 16 2020"
+
+    def exists(self):
+        if os.path.isfile(self.config_file):
+            return True
+        return False
+
+    def read_config_file(self):
+        parser = configparser.ConfigParser()
+        parser.read(self.config_file)
+
+        self.page_url = parser['Page Info']['Page Url']
+        self.page_title = parser['Page Info']['Page Title']
+        self.page_description = parser['Page Info']['Page Description']
+        self.page_update_datetime = parser['Page Info']['Page Update Time']
+
+    def create(self):
+        parser = configparser.ConfigParser()
+
+        parser['Page Info'] = {'Page Url' : self.page_url,
+                               'Page Title' : self.page_title,
+                               'Page Description' : self.page_description,
+                               'Page Update Time' : self.page_update_datetime}
+
+        with open(self.config_file, 'w') as fh:
+            parser.write(fh)
+
+        logging.info("Created page configuration file {0}. Please fill in the page details".format(self.config_file))
 
 
 class Pandoc(object):
@@ -54,7 +88,6 @@ class Pandoc(object):
 
         config = Configuration()
 
-        #subprocess.run(['pandoc','--template',rss_entry,'-V','PAGE_LINK:'+config.page_url, self._mdfile, '-o', self._htmlfile])
         subprocess.run(['pandoc','--template',rss_entry, self._mdfile, '-o', self._htmlfile])
 
 
@@ -411,7 +444,11 @@ def main():
         rss.create_rss_file("rss.xml")
 
     else:
-        convert()
+        config = Configuration()
+        if config.exists():
+            convert()
+        else:
+            config.create()
 
 
 if __name__ == "__main__":

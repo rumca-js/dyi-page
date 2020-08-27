@@ -5,6 +5,10 @@ This is a python markdown page framework generation called 'DYI Page'.
 
 It is similar in principle to Hugo, or Jeckyll.
 
+At the very first time of run dyi-page.py, without any arguments it creates a configuration file.
+
+Please set the page data, which will be used later on during page generation, like page title, etc. The page configuration file is named 'page_config.ini'.
+
 # Prerequisites
 
 The program uses pandoc to generate entries. It has to be installed on the target machine.
