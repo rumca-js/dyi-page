@@ -209,7 +209,7 @@ class MdFileTemplate(TemplateFile):
         self.keys["FILE_ENTRIES"] = file_entries
 
         dir_entries = ""
-        for adir in self.mddirs:
+        for adir in sorted(self.mddirs):
             title = adir
             if title.find("md_") == 0:
                 title = title[3:]
@@ -331,9 +331,13 @@ def convert():
     rss.create_rss_file("rss.xml")
 
 
-def generate_new_section(section_name):
+def normalize_section_name(section_name):
     if not section_name.find("md_") == 0:
         section_name = "md_"+section_name
+
+
+def generate_new_section(section_name):
+    section_name = normalize_section_name(section_name)
 
     dst_dir = os.path.join( markdown_dir, section_name)
 
@@ -366,6 +370,7 @@ def create_new_rss_entry(page_name):
 
 def generate_new_page(page_name, section_name = None):
     if section_name:
+        section_name = normalize_section_name(section_name)
         dst_dir = os.path.join(markdown_dir, section_name)
     else:
         dst_dir = markdown_dir
