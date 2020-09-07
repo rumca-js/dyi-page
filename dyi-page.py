@@ -334,6 +334,7 @@ def convert():
 def normalize_section_name(section_name):
     if not section_name.find("md_") == 0:
         section_name = "md_"+section_name
+    return section_name
 
 
 def generate_new_section(section_name):
@@ -351,7 +352,9 @@ def generate_new_section(section_name):
     shutil.copy( os.path.join(template_dir, 'pandoc.css'), dst_dir)
 
 
-def create_new_rss_entry(page_name):
+def create_new_rss_entry(page_name, section_name):
+    section_name = normalize_section_name(section_name)
+
     date = get_datetime_file_name()
     
     rss_md_file_name = date+".md"
@@ -362,13 +365,21 @@ def create_new_rss_entry(page_name):
 
     rss_destination_file = os.path.join(rss_entries_dir, rss_md_file_name)
 
+    if section_name:
+        page_rss_link = section_name + "/" + page_name
+    else:
+        page_rss_link = page_name
+
     temp.set("PAGE_ENTRY_TITLE", page_name)
+    temp.set("PAGE_ENTRY_LINK", page_rss_link+".html")
     temp.set("DESCRIPTION", "Created a new page {0}".format(page_name))
 
     temp.write( rss_destination_file)
 
 
 def generate_new_page(page_name, section_name = None):
+    full_section_name = section_name
+
     if section_name:
         section_name = normalize_section_name(section_name)
         dst_dir = os.path.join(markdown_dir, section_name)
@@ -388,7 +399,7 @@ def generate_new_page(page_name, section_name = None):
     if page_name.endswith(".md"):
         page_name = page_name[:-3]
 
-    create_new_rss_entry(page_name)
+    create_new_rss_entry(page_name, full_section_name)
 
 
 def generate_backup():
