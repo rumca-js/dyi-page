@@ -11,7 +11,8 @@ Please set the page data, which will be used later on during page generation, li
 
 # Prerequisites
 
-The program uses pandoc to generate entries. It has to be installed on the target machine.
+The program uses pandoc to generate rss entries. 
+It has to be installed on the target machine for the program to correctly generate rss.
 
 # Functionality
 
@@ -31,33 +32,47 @@ The rss.xml file is generated in the blog-html directory.
 
 # CLI
 
-To create a new section for pages (a new directory for pages):
-```
- python3 dyi-page.py -s "section name"
-```
-
 To create a page:
 ```
- python3 dyi-page.py -p "page name"
+ python dyi-page.py -p "page name"
+```
+
+To create a new section for pages (a new directory for pages):
+```
+ python dyi-page.py -s "section name"
 ```
 
 To create a page for a section:
 ```
- python3 dyi-page.py -p "page name" -s "section name"
+ python dyi-page.py -p "page name" -s "section name"
 ```
 
 To convert markdown pages to html ones, just:
 ```
- python3 dyi-page.py
+ python dyi-page.py
 ```
 
 To generate backup file:
 ```
- python3 dyi-page.py -b
+ python dyi-page.py -b
 ```
 
+Creating new pages adds a new RSS entry. The rss entries in blog-rss might be updated as needed.
+
+# Template variables
+
+ - PAGE_TITLE
+ - PAGE_URL
+ - PAGE_DESCRIPTION
+ - PAGE_UPDATE_TIME
+ - DATETIME
+ - DATE
+ - TIME
+ - FILE_ENTRIES
+ - DIR_ENTRIES
+
 # TODO
-create an rss template file.
-The RSS structure is baked in the python file.
-The url needs to be put into some sort of configuration file.
-It is baked into the python file as well.
+
+Drop pandoc in favour of pypandoc (for RSS)
+Some templates were present because of pandoc.
+We should drop them , we should use python code.
