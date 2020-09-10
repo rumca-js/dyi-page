@@ -287,7 +287,7 @@ def process_directory(dir_to_process):
 
     templates = glob.glob(dir_to_process+"/*.template")
 
-    mddirs = [x.replace(dir_to_process+"/","") for x in mddirs]
+    mddirs = [x.replace(dir_to_process+os.sep,"") for x in mddirs]
 
     for atemplate in templates:
         templ = MdFileTemplate(atemplate, mdfiles, mddirs)
