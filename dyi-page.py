@@ -64,11 +64,12 @@ class Configuration(object):
                                'Page Description' : self.page_description,
                                'Page Update Time' : self.page_update_datetime}
 
-        with open(self.config_file, 'w') as fh:
+        with open(self.config_file, 'w', encoding='utf-8') as fh:
             parser.write(fh)
 
         logging.info("Created page configuration file {0}. Please fill in the page details".format(self.config_file))
 
+import pypandoc
 
 class Pandoc(object):
 
@@ -77,7 +78,8 @@ class Pandoc(object):
         self._htmlfile = htmlfile
 
     def convert(self):
-        subprocess.run(['pandoc', '-s', '-c', 'pandoc.css', self._mdfile, '-o', self._htmlfile])
+        #subprocess.run(['pandoc', '-s', '-c', 'pandoc.css', self._mdfile, '-o', self._htmlfile])
+        pypandoc.Panda2Html(self._mdfile, self._htmlfile)
 
     def rss_generate(self):
 
@@ -96,8 +98,12 @@ class MdFile(object):
     def __init__(self, mdfile):
         self._mdfile = mdfile
 
-        with open(self._mdfile, 'r') as fh:
+        with open(self._mdfile, 'r', encoding='utf8') as fh:
             self._data = fh.read()
+
+        # TODO the system right now accepts only new line characters
+        if self._data.find("\r\n") >= 0:
+            raise IOError("The file contains Windows encoding")
 
     def get_header_var(self, variable_name):
         # TODO add support for lists
@@ -150,13 +156,13 @@ class TemplateFile(object):
 
     def write(self, new_file_name):
         data = ""
-        with open(self.template_name, 'r') as fh:
+        with open(self.template_name, 'r', encoding='utf-8') as fh:
             data = fh.read()
 
         for key in self.keys:
             data = data.replace("${0}$".format(key), self.keys[key])
 
-        with open(new_file_name, 'w') as fh:
+        with open(new_file_name, 'w', encoding='utf-8') as fh:
             fh.write(data)
 
     def set(self, key, value):
@@ -253,7 +259,7 @@ class RssFileCreator(object):
     def get_xml_rss_entries_data(self, xml_rss_files):
         rss_entries_data = ""
         for xml_file in xml_rss_files:
-            with open(xml_file, 'r') as fh:
+            with open(xml_file, 'r', encoding='utf-8') as fh:
                 rss_entries_data += fh.read()
         return rss_entries_data
 
