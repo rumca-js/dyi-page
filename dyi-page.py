@@ -20,6 +20,8 @@ import zipfile
 import datetime
 import configparser
 
+import pypandoc
+
 
 html_dir = "blog-html"
 markdown_dir = "blog-md"
@@ -69,17 +71,22 @@ class Configuration(object):
 
         logging.info("Created page configuration file {0}. Please fill in the page details".format(self.config_file))
 
-import pypandoc
 
 class Pandoc(object):
 
     def __init__(self, mdfile, htmlfile):
         self._mdfile = mdfile
         self._htmlfile = htmlfile
+        self._real = False
 
     def convert(self):
-        #subprocess.run(['pandoc', '-s', '-c', 'pandoc.css', self._mdfile, '-o', self._htmlfile])
-        pypandoc.Panda2Html(self._mdfile, self._htmlfile)
+        if self._real:
+            subprocess.run(['pandoc', '-s', '-c', 'pandoc.css', self._mdfile, '-o', self._htmlfile])
+        else:
+            pypandoc.Panda2Html(self._mdfile, self._htmlfile)
+
+    def use_pandoc(self, use_pandoc):
+        self._real = use_pandoc
 
     def rss_generate(self):
 
@@ -101,7 +108,6 @@ class MdFile(object):
         with open(self._mdfile, 'r', encoding='utf8') as fh:
             self._data = fh.read()
 
-        # TODO the system right now accepts only new line characters
         if self._data.find("\r\n") >= 0:
             raise IOError("The file contains Windows encoding")
 
@@ -300,7 +306,7 @@ def generate_html_path(dir_to_process):
         os.makedirs(dir_to_process)
 
 
-def process_file(afile):
+def process_file(afile, use_pandoc):
     if afile.endswith(".md"):
         mdfile = afile
         mdobj = MdFile(mdfile)
@@ -308,6 +314,7 @@ def process_file(afile):
         logging.info("Converting {0} to {1}".format(mdfile, htmlfile))
 
         pan = Pandoc(mdfile, htmlfile)
+        pan.use_pandoc(use_pandoc)
         pan.convert()
 
     elif afile.endswith(".template"):
@@ -318,7 +325,7 @@ def process_file(afile):
         shutil.copy(afile, dst_file)
 
 
-def convert():
+def convert(use_pandoc):
     shutil.rmtree(html_dir)
     os.makedirs(html_dir)
 
@@ -331,7 +338,7 @@ def convert():
 
         files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
         for afile in files:
-            process_file( os.path.join(root, afile))
+            process_file( os.path.join(root, afile), use_pandoc)
 
     rss = RssFileCreator()
     rss.create_rss_file("rss.xml")
@@ -440,6 +447,7 @@ def read_arguments():
     parser.add_argument('-s', '--section', dest='generate_new_section', help='Generates new section with the specified name')
     parser.add_argument('-b', '--backup', dest='generate_backup', action="store_true", help='Generates backup file')
     parser.add_argument('-r', '--rss', dest='generate_rss', action="store_true", help='Generates rss file')
+    parser.add_argument('-P', '--pandoc', dest='use_pandoc', action="store_true", help='Uses pandoc for producing entries')
 
     args = parser.parse_args()
 
@@ -468,7 +476,7 @@ def main():
     else:
         config = Configuration()
         if config.exists():
-            convert()
+            convert(args.use_pandoc)
         else:
             config.create()
 
