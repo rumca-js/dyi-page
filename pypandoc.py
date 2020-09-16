@@ -1,8 +1,3 @@
-"""
-This program is a separate part, and can be found at:
-https://github.com/rumca-js/pypandoc
-"""
-
 import re
 
 
@@ -74,6 +69,7 @@ class MyPanda(object):
 
         self._header = False
         self._list = False
+        self._stop = False
 
         self._attr = {}
 
@@ -107,6 +103,9 @@ class MyPanda(object):
 
         token = self.read_token()
         while token:
+            if self._stop:
+                break
+
             self._prev_pos = self._pos
             self.process_token(token)
             if self._pos == self._prev_pos:
@@ -252,7 +251,7 @@ class MyPanda(object):
         if self._list:
             self.endElement(MyPanda.LIST)
 
-        self.startElement(MyPanda.LIST, {})
+        self.startElement(MyPanda.LIST, {'text' : token.group(0) })
         self._list = True
 
         self._pos = token.end()
@@ -410,6 +409,40 @@ class MyPanda(object):
         value = self._data[start_place: end_place]
 
         return value, end_place+1
+
+    def get_file_name(self):
+        return self._file_name
+
+    def stop(self):
+        self._stop = True
+
+
+class MyPandaDom(MyPanda):
+
+    def __init__(self, mdfile, only_header=False):
+        self.text = ""
+        self.header = {}
+        self.only_header = only_header
+
+        super().__init__()
+
+        self.parse(mdfile)
+
+    def startElement(self, tag, attributes):
+        if tag == MyPanda.HEADER:
+            self.header = attributes
+        elif tag == MyPanda.CHARACTERS:
+            self.text += attributes['text']
+        else:
+            self.text += attributes['text']
+
+    def endElement(self, tag):
+        if tag == MyPanda.HEADER and self.only_header:
+            self.stop()
+
+    def characters(self, token):
+        """ TODO this should be text instead of token? """
+        self.text += token.group(0)
 
 
 class Panda2Html(MyPanda):

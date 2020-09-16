@@ -100,43 +100,13 @@ class Pandoc(object):
         subprocess.run(['pandoc','--template',rss_entry, self._mdfile, '-o', self._htmlfile])
 
 
-class MdFile(object):
-    """
-    TODO use pandoc python to read and parse.
-    maybe provide some DOM like functionality.
-    """
+class MdFile(pypandoc.MyPandaDom):
 
     def __init__(self, mdfile):
-        self._mdfile = mdfile
-
-        with open(self._mdfile, 'r', encoding='utf8') as fh:
-            self._data = fh.read()
-
-        if self._data.find("\r\n") >= 0:
-            raise IOError("The file contains Windows encoding")
-
-    def get_header_var(self, variable_name):
-        # TODO add support for lists
-
-        variable_delim = ":"
-        wh1 = self._data.find(variable_name + variable_delim)
-        if wh1 != -1:
-            wh2 = self._data.find('"', wh1)
-            wh2a = self._data.find("\n", wh1)
-
-            if wh2 < wh2a:
-                wh3 = self._data.find('"', wh2+1)
-                return self._data[wh2+1:wh3]
-            else:
-                wh2 = self._data.find("\n", wh1)
-                return self._data[wh1+len(variable_name+variable_delim):wh2]
-
-
-    def get_file_name(self):
-        return self._mdfile
+        super().__init__(mdfile, True)
 
     def get_html_file_name(self):
-        file_name_only = self._mdfile[:-3]
+        file_name_only = self.get_file_name()[:-3]
         htmlfile = file_name_only.replace(markdown_dir, html_dir)+".html"
         return htmlfile
 
@@ -208,7 +178,7 @@ class MdFileTemplate(TemplateFile):
 
     def sort_pages(self):
         self.pages = sorted(self.pages, 
-                key = lambda x : (x.get_header_var('date'), x.get_header_var('title') ), 
+                key = lambda x : (x.header['date'], x.header['title'] ), 
                 reverse = True)
 
     def establish_variables(self):
@@ -216,8 +186,8 @@ class MdFileTemplate(TemplateFile):
         file_entries = ""
         for key, mdobj in enumerate(self.pages):
             if not mdobj.is_index():
-                title = mdobj.get_header_var("title")
-                updated = mdobj.get_header_var("date")
+                title = mdobj.header["title"]
+                updated = mdobj.header["date"]
 
                 html_file_name = os.path.split(mdobj.get_html_file_name())[1]
 
@@ -315,7 +285,7 @@ def process_file(afile, use_pandoc):
     if afile.endswith(".md"):
         mdfile = afile
         mdobj = MdFile(mdfile)
-        if mdobj.get_header_var('draft').strip() != "true":
+        if mdobj.header['draft'].strip() != "true":
             htmlfile = mdobj.get_html_file_name()
             logging.info("Converting {0} to {1}".format(mdfile, htmlfile))
 
