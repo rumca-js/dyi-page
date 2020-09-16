@@ -1,9 +1,16 @@
-$PAGE_HEADER$
+---
+title: "Hello World page"
+date: $DATETIME$
+draft: $PAGE_DRAFT$
+description : "Hello World page"
+tags : [
+    "exampletag",
+]
+categories : [
+    "examplecategory",
+]
+---
 
-[Index page](./index.html)
+[Index](./index.html)
 
-$PAGE_ENTRY$
-
-# Thank you
-
-[Index page](./index.html)
+Hello World!

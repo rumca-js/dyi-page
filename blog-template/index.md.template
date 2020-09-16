@@ -1,17 +1,13 @@
 ---
-title: "$PAGE_TITLE"
+title: "Index"
 date: $DATETIME$
 draft: false
-description : "$PAGE_TITLE$"
+description : "Index"
 ---
 
-# Index page
+[Index wy¿ej](../index.html)
 
-This is a index page.
-
-RSS: [Link](./rss.xml)
-
-# Subjects
+# Entries
 
 $FILE_ENTRIES$
 
