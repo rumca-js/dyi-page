@@ -1,6 +1,6 @@
 ---
-title: DYI - blog
-date: 2020-08-25 17:57:49
+title: myserver - blog
+date: 2020-09-16 15:13:05
 draft: false
 description : "$PAGE_DESCRIPTION"
 ---
