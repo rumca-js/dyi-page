@@ -9,11 +9,6 @@ At the very first time of run dyi-page.py, without any arguments it creates a co
 
 Please set the page data, which will be used later on during page generation, like page title, etc. The page configuration file is named 'page_config.ini'.
 
-# Prerequisites
-
-The program uses pandoc to generate rss entries. 
-It has to be installed on the target machine for the program to correctly generate rss.
-
 # Functionality
 
 There are three directories that are relevant:
@@ -70,9 +65,3 @@ Creating new pages adds a new RSS entry. The rss entries in blog-rss might be up
  - TIME
  - FILE_ENTRIES
  - DIR_ENTRIES
-
-# TODO
-
-Drop pandoc in favour of pypandoc (for RSS)
-Some templates were present because of pandoc.
-We should drop them , we should use python code.

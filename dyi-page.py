@@ -97,7 +97,13 @@ class Pandoc(object):
 
         config = Configuration()
 
-        subprocess.run(['pandoc','--template',rss_entry, self._mdfile, '-o', self._htmlfile])
+        if self._real:
+            subprocess.run(['pandoc','--template',rss_entry, self._mdfile, '-o', self._htmlfile])
+        else:
+            md = MdFile(self._mdfile)
+            temp = TemplateFile( rss_entry)
+            temp.keys.update(md.header)
+            temp.write(self._htmlfile)
 
 
 class MdFile(pypandoc.MyPandaDom):
