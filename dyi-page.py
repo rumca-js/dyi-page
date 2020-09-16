@@ -101,6 +101,10 @@ class Pandoc(object):
 
 
 class MdFile(object):
+    """
+    TODO use pandoc python to read and parse.
+    maybe provide some DOM like functionality.
+    """
 
     def __init__(self, mdfile):
         self._mdfile = mdfile
@@ -156,6 +160,7 @@ class TemplateFile(object):
         self.keys["PAGE_URL"] = config.page_url
         self.keys["PAGE_DESCRIPTION"] = config.page_description
         self.keys["PAGE_UPDATE_DATETIME"] = config.page_update_datetime
+        self.keys["PAGE_DRAFT"] = "false"
         self.keys["DATETIME"] = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
         self.keys["DATE"] = datetime.datetime.today().strftime('%Y-%m-%d')
         self.keys["TIME"] = datetime.datetime.today().strftime('%H:%M:%S')
@@ -287,7 +292,7 @@ def get_datetime_file_name():
     return datetime.datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
 
 
-def process_directory(dir_to_process):
+def process_templates(dir_to_process):
     mdfiles = glob.glob(dir_to_process+"/*.md")
     mddirs = glob.glob(dir_to_process+"/md_*")
 
@@ -310,12 +315,15 @@ def process_file(afile, use_pandoc):
     if afile.endswith(".md"):
         mdfile = afile
         mdobj = MdFile(mdfile)
-        htmlfile = mdobj.get_html_file_name()
-        logging.info("Converting {0} to {1}".format(mdfile, htmlfile))
+        if mdobj.get_header_var('draft').strip() != "true":
+            htmlfile = mdobj.get_html_file_name()
+            logging.info("Converting {0} to {1}".format(mdfile, htmlfile))
 
-        pan = Pandoc(mdfile, htmlfile)
-        pan.use_pandoc(use_pandoc)
-        pan.convert()
+            pan = Pandoc(mdfile, htmlfile)
+            pan.use_pandoc(use_pandoc)
+            pan.convert()
+        else:
+            logging.info("Skipping draft {0}".format(mdfile))
 
     elif afile.endswith(".template"):
         pass
@@ -329,11 +337,11 @@ def convert(use_pandoc):
     shutil.rmtree(html_dir)
     os.makedirs(html_dir)
 
-    process_directory(markdown_dir)
+    process_templates(markdown_dir)
 
     for root, dirs, files in os.walk(markdown_dir):
         for adir in dirs:
-            process_directory( os.path.join(root, adir))
+            process_templates( os.path.join(root, adir))
             generate_html_path( os.path.join(root, adir))
 
         files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
@@ -390,7 +398,7 @@ def create_new_rss_entry(page_name, section_name):
     temp.write( rss_destination_file)
 
 
-def generate_new_page(page_name, section_name = None):
+def generate_new_page_inc(page_name, section_name = None, draft=False):
     full_section_name = section_name
 
     if section_name:
@@ -403,6 +411,8 @@ def generate_new_page(page_name, section_name = None):
         os.makedirs(dst_dir)
 
     temp = TemplateFile(os.path.join(template_dir, 'page.md.template'))
+    if draft:
+        temp.set("PAGE_DRAFT", "true")
 
     if not page_name.endswith(".md"):
         page_name = page_name+".md"
@@ -412,7 +422,15 @@ def generate_new_page(page_name, section_name = None):
     if page_name.endswith(".md"):
         page_name = page_name[:-3]
 
+
+def generate_new_page(page_name, section_name = None):
+    generate_new_page_inc(page_name, section_name)
+
     create_new_rss_entry(page_name, full_section_name)
+
+
+def generate_new_draft(page_name, section_name = None):
+    generate_new_page_inc(page_name, section_name, True)
 
 
 def generate_backup():
@@ -446,7 +464,8 @@ def read_arguments():
     parser.add_argument('-p', '--page', dest='generate_new_page', help='Generates new page with the specified name')
     parser.add_argument('-s', '--section', dest='generate_new_section', help='Generates new section with the specified name')
     parser.add_argument('-b', '--backup', dest='generate_backup', action="store_true", help='Generates backup file')
-    parser.add_argument('-r', '--rss', dest='generate_rss', action="store_true", help='Generates rss file')
+    parser.add_argument('-d', '--draft', dest='generate_new_draft', help='Generates draft page')
+    parser.add_argument('-r', '--rss', dest='generate_rss', action="store_true", help='Generates output rss file')
     parser.add_argument('-P', '--pandoc', dest='use_pandoc', action="store_true", help='Uses pandoc for producing entries')
 
     args = parser.parse_args()
@@ -460,11 +479,16 @@ def main():
     if args.generate_new_section:
         if args.generate_new_page:
             generate_new_page(args.generate_new_page, args.generate_new_section)
+        elif args.generate_new_draft:
+            generate_new_draft(args.generate_new_draft, args.generate_new_section)
         else:
             generate_new_section(args.generate_new_section)
 
     elif args.generate_new_page:
         generate_new_page(args.generate_new_page)
+
+    elif args.generate_new_draft:
+        generate_new_draft(args.generate_new_draft)
 
     elif args.generate_backup:
         generate_backup()
