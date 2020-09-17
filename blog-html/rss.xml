@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+
+<channel>
+<title>myserver - blog!</title>
+<link>http://myserver.com/blog-html</link>
+<description>myserver is a fun place to be</description>
+<lastBuildDate>$PAGE_DATE$</lastBuildDate>
+
+<item>
+<title>First RSS entry</title>
+<link>http://myserver.com/blog-html/index.html</link>
+<guid>index.html</guid>
+$if(description)$
+<description>This is my first RSS entry</description>
+$endif$
+<pubDate>20200821</pubDate>
+</item>
+
+
+</channel>
+</rss>
