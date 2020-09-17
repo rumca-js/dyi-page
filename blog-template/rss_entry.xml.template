@@ -2,8 +2,6 @@
 <title>$title$</title>
 <link>$PAGE_URL$/$link$</link>
 <guid>$link$</guid>
-$if(description)$
 <description>$description$</description>
-$endif$
 <pubDate>$date$</pubDate>
 </item>
