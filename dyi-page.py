@@ -22,6 +22,7 @@ import configparser
 
 import pypandoc
 
+__version__ = '0.0.1'
 
 html_dir = "blog-html"
 markdown_dir = "blog-md"
@@ -72,9 +73,11 @@ class Configuration(object):
         logging.info("Created page configuration file {0}. Please fill in the page details".format(self.config_file))
 
 
-class Pandoc(object):
+class Pandoc(pypandoc.PyPandoc2Html):
 
     def __init__(self, mdfile, htmlfile):
+        super().__init__()
+
         self._mdfile = mdfile
         self._htmlfile = htmlfile
         self._real = False
@@ -83,10 +86,36 @@ class Pandoc(object):
         if self._real:
             subprocess.run(['pandoc', '-s', '-c', 'pandoc.css', self._mdfile, '-o', self._htmlfile])
         else:
-            pypandoc.Panda2Html(self._mdfile, self._htmlfile)
+            self.convert2html(self._mdfile, self._htmlfile)
 
     def use_pandoc(self, use_pandoc):
         self._real = use_pandoc
+
+    def get_html_header(self):
+        return """\
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title>$PAGE_TITLE$</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <link rel="stylesheet" href="pandoc.css" type="text/css" />
+</head>
+<body>
+<div id="header">
+<h1 class="title">$PAGE_TITLE$</h1>
+<h3 class="date">$PAGE_DATE$</h3>
+</div>
+    """
+
+    def get_html_footer(self):
+        data = "</p><p id=\"footer\">"
+        data += "Generated using dyi-page {0}<br/>".format(__version__)
+        data += "Generated using pypandoc {0}<br/>".format(pypandoc.__version__)
+        data += "</p></body>\n</html>"
+        return data
 
     def rss_generate(self):
 
@@ -94,8 +123,6 @@ class Pandoc(object):
 
         templ = TemplateFile( os.path.join(template_dir, 'rss_entry.xml.template'))
         templ.write(rss_entry)
-
-        config = Configuration()
 
         if self._real:
             subprocess.run(['pandoc','--template',rss_entry, self._mdfile, '-o', self._htmlfile])
@@ -106,7 +133,7 @@ class Pandoc(object):
             temp.write(self._htmlfile)
 
 
-class MdFile(pypandoc.MyPandaDom):
+class MdFile(pypandoc.PyPandocDom):
 
     def __init__(self, mdfile):
         super().__init__(mdfile, True)
@@ -402,7 +429,7 @@ def generate_new_page_inc(page_name, section_name = None, draft=False):
 def generate_new_page(page_name, section_name = None):
     generate_new_page_inc(page_name, section_name)
 
-    create_new_rss_entry(page_name, full_section_name)
+    create_new_rss_entry(page_name, section_name)
 
 
 def generate_new_draft(page_name, section_name = None):

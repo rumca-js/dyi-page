@@ -1,4 +1,8 @@
+
 import re
+
+
+__version__ = '0.0.1'
 
 
 def find_matching_bracket(text, bracket_start, bracket_stop, pos=None, end=None):
@@ -29,26 +33,7 @@ def find_matching_bracket(text, bracket_start, bracket_stop, pos=None, end=None)
                 return key+_pos
 
 
-class StackInfo(object):
-
-    HEADER = 0
-    HEADING = 1
-    LINK = 2
-    IMAGE = 3
-
-    def __init__(self, atype):
-        self._type = atype
-        self._attr = {}
-        self._text = ""
-
-    def add_attr(self, key, value):
-        self._attr[key] = value
-
-    def add_text(self, text):
-        self._text.append(text)
-
-
-class MyPanda(object):
+class PyPandoc(object):
     """
     @brief Suggesting
     https://www.tutorialspoint.com/python3/python_xml_processing.htm
@@ -63,6 +48,8 @@ class MyPanda(object):
     BREAK = "Break"
     CHARACTERS = "char"
     LIST = "List"
+    EMBED = "Embed"
+    EMBED_YT = "EmbedYt"
 
     def __init__(self, file_name = None):
         self._file_name = file_name
@@ -188,7 +175,11 @@ class MyPanda(object):
 
             if not processed:
                 if text.startswith("!["):
-                    self.process_image(token)
+                    self.process_embed(token, PyPandoc.IMAGE)
+                elif text.startswith("$["):
+                    self.process_embed(token, PyPandoc.EMBED)
+                elif text.startswith("$YT["):
+                    self.process_embed(token, PyPandoc.EMBED_YT)
                 elif text.startswith("["):
                     self.process_link(token)
                 else:
@@ -229,8 +220,8 @@ class MyPanda(object):
                 self.process_text(inner)
 
     def process_text(self, text):
-        self.startElement(MyPanda.CHARACTERS, {'text' : text})
-        self.endElement(MyPanda.CHARACTERS)
+        self.startElement(PyPandoc.CHARACTERS, {'text' : text})
+        self.endElement(PyPandoc.CHARACTERS)
         self._pos += len(text)
 
     def process_characters(self, token):
@@ -239,34 +230,33 @@ class MyPanda(object):
 
     def process_big_break(self, inner_text):
         if self._list:
-            self.endElement(MyPanda.LIST)
+            self.endElement(PyPandoc.LIST)
             self._list = False
 
-        self.startElement(MyPanda.BREAK, {})
-        self.endElement(MyPanda.BREAK)
+        self.startElement(PyPandoc.BREAK, {})
+        self.endElement(PyPandoc.BREAK)
 
         self._pos = self._pos + len(inner_text)
 
     def process_list(self, token):
         if self._list:
-            self.endElement(MyPanda.LIST)
+            self.endElement(PyPandoc.LIST)
 
-        self.startElement(MyPanda.LIST, {'text' : token.group(0) })
+        self.startElement(PyPandoc.LIST, {'text' : token.group(0) })
         self._list = True
 
         self._pos = token.end()
 
-    def process_image(self, token):
-        end_where = None
-
+    def process_embed(self, token, tok_type):
         text = token.group(0)
 
+        st0 = self._data.find("[", token.start(0))
         wh0 = find_matching_bracket(self._data, "[", "]", token.start(0))
         wh1 = self._data.find("(", wh0)
         wh2 = find_matching_bracket(self._data, "(", ")", wh1)
 
         text = self._data[token.start(0):wh2+1]
-        name = self._data[token.start(0)+2:wh0]
+        name = self._data[st0+1:wh0]
         link = self._data[wh1+1:wh2]
 
         text = text.strip()
@@ -280,9 +270,10 @@ class MyPanda(object):
         self._attr['text'] = text
         self._attr['name'] = name
         self._attr['link'] = link
+        self._attr['type'] = tok_type
 
-        self.startElement(MyPanda.IMAGE, self._attr)
-        self.endElement(MyPanda.IMAGE)
+        self.startElement(tok_type, self._attr)
+        self.endElement(tok_type)
 
         if wh2 >= 0:
             self._pos = wh2+1
@@ -313,14 +304,14 @@ class MyPanda(object):
         self._attr['name'] = name
         self._attr['link'] = link
 
-        self.startElement(MyPanda.LINK, self._attr)
+        self.startElement(PyPandoc.LINK, self._attr)
 
         pat = re.compile("\!\[")
         m = pat.search(self._data, token.start()+1, wh2)
         if m:
-            self.process_image(m)
+            self.process_embed(m, PyPandoc.IMAGE)
 
-        self.endElement(MyPanda.LINK)
+        self.endElement(PyPandoc.LINK)
 
         if wh2 >= 0:
             self._pos = wh2+1
@@ -343,11 +334,11 @@ class MyPanda(object):
         attributes = { 'text': full_text[tt.end():] }
 
         if text == "#":
-            heading = MyPanda.H1
+            heading = PyPandoc.H1
         if text == "##":
-            heading = MyPanda.H2
+            heading = PyPandoc.H2
         if text == "###":
-            heading = MyPanda.H3
+            heading = PyPandoc.H3
 
         self.startElement( heading, attributes)
         self.endElement( heading)
@@ -361,8 +352,8 @@ class MyPanda(object):
             self._pos = token.end()
         else:
             if text == "---":
-                self.startElement(MyPanda.HEADER, self._attr)
-                self.endElement(MyPanda.HEADER)
+                self.startElement(PyPandoc.HEADER, self._attr)
+                self.endElement(PyPandoc.HEADER)
                 self._header = False
                 self._pos = token.end()
             else:
@@ -417,7 +408,7 @@ class MyPanda(object):
         self._stop = True
 
 
-class MyPandaDom(MyPanda):
+class PyPandocDom(PyPandoc):
 
     def __init__(self, mdfile, only_header=False):
         self.text = ""
@@ -429,15 +420,15 @@ class MyPandaDom(MyPanda):
         self.parse(mdfile)
 
     def startElement(self, tag, attributes):
-        if tag == MyPanda.HEADER:
+        if tag == PyPandoc.HEADER:
             self.header = attributes
-        elif tag == MyPanda.CHARACTERS:
+        elif tag == PyPandoc.CHARACTERS:
             self.text += attributes['text']
         else:
             self.text += attributes['text']
 
     def endElement(self, tag):
-        if tag == MyPanda.HEADER and self.only_header:
+        if tag == PyPandoc.HEADER and self.only_header:
             self.stop()
 
     def characters(self, token):
@@ -445,9 +436,9 @@ class MyPandaDom(MyPanda):
         self.text += token.group(0)
 
 
-class Panda2Html(MyPanda):
+class PyPandoc2Html(PyPandoc):
 
-    def __init__(self, from_file, to_file):
+    def __init__(self):
         super().__init__()
 
         self._list = False
@@ -455,70 +446,82 @@ class Panda2Html(MyPanda):
 
         self._tag = None
         self._prev_tag = None
+        self.embed_width = "500"
+        self.embed_height = "400"
 
+    def convert2html(self, from_file, to_file):
         self._fh = open(to_file, 'wb')
 
         self.parse(from_file)
 
-        data = "</body>\n</html>"
+        data = self.get_html_footer()
         self._fh.write(data.encode("utf-8"))
 
-    def startElement(self, tag, attributes):
-
-        if tag == MyPanda.HEADER:
-
-            title = attributes['title']
-            date = attributes['date']
-
-            header = """\
+    def get_html_header(self):
+        return """\
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta http-equiv="Content-Style-Type" content="text/css" />
   <meta name="generator" content="pandoc" />
-  <title>{0}</title>
+  <title>$PAGE_TITLE$</title>
   <style type="text/css">code{white-space: pre;}</style>
   <link rel="stylesheet" href="pandoc.css" type="text/css" />
 </head>
 <body>
 <div id="header">
-<h1 class="title">{1}</h1>
-<h3 class="date">{2}</h3>
+<h1 class="title">$PAGE_TITLE$</h1>
+<h3 class="date">$PAGE_DATE$</h3>
 </div>
     """
-            header = header.replace("{0}",title)
-            header = header.replace("{1}",title)
-            header = header.replace("{2}",date)
+
+    def get_html_footer(self):
+        data = "</p><p id=\"footer\">Generated using pypandoc {0}</p></body>\n</html>".format(__version__)
+        return data
+
+    def startElement(self, tag, attributes):
+
+        if tag == PyPandoc.HEADER:
+
+            title = attributes['title']
+            date = attributes['date']
+
+            header = self.get_html_header()
+
+            header = header.replace("$PAGE_TITLE$",title)
+            header = header.replace("$PAGE_TITLE$",title)
+            header = header.replace("$PAGE_DATE$",date)
+
             self._fh.write(header.encode("utf-8"))
 
-        elif tag == MyPanda.BREAK:
+        elif tag == PyPandoc.BREAK:
 
             data = '</p><p>\n\n'
             self._fh.write(data.encode("utf-8"))
 
-        elif tag == MyPanda.H1:
+        elif tag == PyPandoc.H1:
 
             text = attributes['text']
             data = '<h1>{0}</h1>\n'.format(text)
             self._fh.write(data.encode("utf-8"))
 
-        elif tag == MyPanda.LINK:
+        elif tag == PyPandoc.LINK:
             self._link = True
 
-        elif tag == MyPanda.H2:
+        elif tag == PyPandoc.H2:
 
             text = attributes['text']
             data = '<h2>{0}</h2>\n'.format(text)
             self._fh.write(data.encode("utf-8"))
 
-        elif tag == MyPanda.H3:
+        elif tag == PyPandoc.H3:
 
             text = attributes['text']
             data = '<h3>{0}</h3>\n'.format(text)
             self._fh.write(data.encode("utf-8"))
 
-        elif tag == MyPanda.LIST:
+        elif tag == PyPandoc.LIST:
 
             if self._list:
                 data = '</li><li>\n'
@@ -527,7 +530,7 @@ class Panda2Html(MyPanda):
             self._list = True
             self._fh.write(data.encode("utf-8"))
 
-        elif tag == MyPanda.CHARACTERS:
+        elif tag == PyPandoc.CHARACTERS:
 
             text = attributes['text']
 
@@ -557,11 +560,11 @@ class Panda2Html(MyPanda):
 
     def endElement(self, tag):
 
-        if tag != MyPanda.CHARACTERS:
+        if tag != PyPandoc.CHARACTERS:
             #print("Stopping element: "+tag)
             None
 
-        if tag == MyPanda.LINK:
+        if tag == PyPandoc.LINK:
 
             if tag == self._tag[0]:
                 link = self._tag[1]['link']
@@ -576,13 +579,27 @@ class Panda2Html(MyPanda):
 
             self._link = False
 
-        elif tag == MyPanda.IMAGE:
+        elif tag == PyPandoc.IMAGE:
 
             if not self._link:
                 link = self._tag[1]['link']
                 name = self._tag[1]['name']
                 data = '<img src="{0}" alt="{1}"/>'.format(link, name)
                 self._fh.write(data.encode("utf-8"))
+
+        elif tag == PyPandoc.EMBED:
+            link = self._tag[1]['link']
+            name = self._tag[1]['name']
+            ltype = self._tag[1]['type']
+            data = """<iframe width="{0}" height="{1}" src="{2}"></iframe>""".format(self.embed_width, self.embed_height, link)
+            self._fh.write(data.encode("utf-8"))
+
+        elif tag == PyPandoc.EMBED_YT:
+            link = self._tag[1]['link']
+            name = self._tag[1]['name']
+            ltype = self._tag[1]['type']
+            data = """<iframe width="{0}" height="{1}" src="https://www.youtube.com/embed/{2}"></iframe>""".format(self.embed_width, self.embed_height, link)
+            self._fh.write(data.encode("utf-8"))
 
         #data = "Stopping element {0}<br/>\n".format(tag)
         #self._fh.write(data.encode("utf-8"))
@@ -591,12 +608,3 @@ class Panda2Html(MyPanda):
     def characters(self, token):
         data = token.group(0)
         self._fh.write(data.encode("utf-8"))
-
-
-if ( __name__ == "__main__"):
-   
-   parser = MyPanda()
-   #parser.parse("blog-md/index.md")
-   parser.parse("blog-md/anonymity.md")
-   #parser.parse("blog-md/internet-security.md")
-   #parser.parse("blog-md/sheepy.md")
