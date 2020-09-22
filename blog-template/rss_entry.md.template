@@ -1,8 +1,8 @@
 ---
-title: "$PAGE_ENTRY_TITLE$"
+title: "$RSS_ENTRY_TITLE$"
 date: $DATETIME$
 draft: false
 description : $DESCRIPTION$
-link : $PAGE_ENTRY_TITLE$.html
+link : $RSS_ENTRY_LINK$
 ---
 
