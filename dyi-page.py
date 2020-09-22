@@ -224,7 +224,7 @@ class MdFileTemplate(TemplateFile):
 
                 html_file_name = os.path.split(mdobj.get_html_file_name())[1]
 
-                file_entries += "[{0}](./{1})\t{2}\n\n".format(title, html_file_name, updated)
+                file_entries += " - [{0}](./{1})\n".format(title, html_file_name, updated)
 
         self.keys["FILE_ENTRIES"] = file_entries
 
@@ -235,7 +235,7 @@ class MdFileTemplate(TemplateFile):
                 title = title[3:]
 
             html_file_name = os.path.join(adir, "index.html")
-            dir_entries += "[{0}](./{1})\n\n".format(title, html_file_name)
+            dir_entries += " - [{0}](./{1})\n".format(title, html_file_name)
 
         self.keys["DIR_ENTRIES"] = dir_entries
 
@@ -247,9 +247,11 @@ class RssFileCreator(object):
 
         logging.info("Generating RSS file {0}".format(big_rss_file))
 
-        md_rss_files = self.get_md_entries()
+        self.md_rss_files = self.get_md_entries()
 
-        xml_rss_files = self.create_xml_rss_entries(md_rss_files)
+        self.validate()
+
+        xml_rss_files = self.create_xml_rss_entries(self.md_rss_files)
 
         xml_rss_files = self.get_xml_entries()
         xml_rss_files = sorted(xml_rss_files)
@@ -289,6 +291,15 @@ class RssFileCreator(object):
         files = glob.glob( os.path.join(rss_entries_dir, "*.xml"))
         for afile in files:
             os.remove(afile)
+
+    def validate(self):
+        for mdfile in self.md_rss_files:
+            md = MdFile(mdfile)
+            link = md.header['link']
+
+            file_path = os.path.join(html_dir, link)
+            if not os.path.isfile(file_path):
+                raise IOError("{0}: The specified link does not exist {0}".format(mdfile, link))
 
 
 def get_datetime_file_name():
@@ -486,7 +497,7 @@ def main():
             generate_new_draft(args.generate_new_draft, args.generate_new_section)
         else:
             generate_new_section(args.generate_new_section)
-
+    
     elif args.generate_new_page:
         generate_new_page(args.generate_new_page)
 
