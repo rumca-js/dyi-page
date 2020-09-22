@@ -176,8 +176,8 @@ class TemplateFile(object):
         for key in self.keys:
             data = data.replace("${0}$".format(key), self.keys[key])
 
-        with open(new_file_name, 'w', encoding='utf-8') as fh:
-            fh.write(data)
+        with open(new_file_name, 'wb') as fh:
+            fh.write(data.encode('utf-8') )
 
     def set(self, key, value):
         self.keys[key] = value
@@ -388,26 +388,35 @@ def generate_new_section(section_name):
 
 
 def create_new_rss_entry(page_name, section_name):
-    section_name = normalize_section_name(section_name)
+
+    if page_name:
+        section_name = normalize_section_name(section_name)
+
+        if section_name:
+            page_rss_link = section_name + "/" + page_name
+        else:
+            page_rss_link = page_name
+
+        rss_entry_title = page_name
+        rss_entry_link = page_rss_link
+        description = "Created a new page {0}".format(page_name)
+    else:
+        rss_entry_title = "New RSS entry"
+        config = Configuration()
+        rss_entry_link = config.page_url
+        description = "New RSS entry"
 
     date = get_datetime_file_name()
     
     rss_md_file_name = date+".md"
-
     rss_md_template = os.path.join(template_dir, "rss_entry.md.template")
+    rss_destination_file = os.path.join(rss_entries_dir, rss_md_file_name)
 
     temp = TemplateFile(rss_md_template)
 
-    rss_destination_file = os.path.join(rss_entries_dir, rss_md_file_name)
-
-    if section_name:
-        page_rss_link = section_name + "/" + page_name
-    else:
-        page_rss_link = page_name
-
-    temp.set("PAGE_ENTRY_TITLE", page_name)
-    temp.set("PAGE_ENTRY_LINK", page_rss_link+".html")
-    temp.set("DESCRIPTION", "Created a new page {0}".format(page_name))
+    temp.set("RSS_ENTRY_TITLE", rss_entry_title)
+    temp.set("RSS_ENTRY_LINK", rss_entry_link)
+    temp.set("DESCRIPTION", description)
 
     temp.write( rss_destination_file)
 
@@ -475,11 +484,12 @@ def generate_backup():
 
 def read_arguments():
     parser = argparse.ArgumentParser(description='DYI Page generator.')
-    parser.add_argument('-p', '--page', dest='generate_new_page', help='Generates new page with the specified name')
-    parser.add_argument('-s', '--section', dest='generate_new_section', help='Generates new section with the specified name')
-    parser.add_argument('-b', '--backup', dest='generate_backup', action="store_true", help='Generates backup file')
-    parser.add_argument('-d', '--draft', dest='generate_new_draft', help='Generates draft page')
-    parser.add_argument('-r', '--rss', dest='generate_rss', action="store_true", help='Generates output rss file')
+    parser.add_argument('-p', '--page', dest='generate_new_page', help='Creates new page with the specified name')
+    parser.add_argument('-s', '--section', dest='generate_new_section', help='Creates new section with the specified name')
+    parser.add_argument('-b', '--backup', dest='generate_backup', action="store_true", help='Creates backup file')
+    parser.add_argument('-d', '--draft', dest='generate_new_draft', help='Creates draft page')
+    parser.add_argument('-r', '--new-rss', dest='generate_rss_entry', action="store_true", help='Creates a new rss md file')
+    parser.add_argument('-R', '--rss', dest='generate_rss', action="store_true", help='Creates output rss file')
     parser.add_argument('-P', '--pandoc', dest='use_pandoc', action="store_true", help='Uses pandoc for producing entries')
 
     args = parser.parse_args()
@@ -510,6 +520,9 @@ def main():
     elif args.generate_rss:
         rss = RssFileCreator()
         rss.create_rss_file("rss.xml")
+
+    elif args.generate_rss_entry:
+        create_new_rss_entry(None, None)
 
     else:
         config = Configuration()
