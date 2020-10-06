@@ -390,15 +390,14 @@ def generate_new_section(section_name):
 def create_new_rss_entry(page_name, section_name):
 
     if page_name:
-        section_name = normalize_section_name(section_name)
-
         if section_name:
+            section_name = normalize_section_name(section_name)
             page_rss_link = section_name + "/" + page_name
         else:
             page_rss_link = page_name
 
         rss_entry_title = page_name
-        rss_entry_link = page_rss_link
+        rss_entry_link = page_rss_link + ".html"
         description = "Created a new page {0}".format(page_name)
     else:
         rss_entry_title = "New RSS entry"

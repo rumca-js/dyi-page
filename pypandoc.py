@@ -46,6 +46,7 @@ class PyPandoc(object):
     LINK = "Link"
     IMAGE = "Image"
     BREAK = "Break"
+    PRE = "Pre"
     CHARACTERS = "char"
     LIST = "List"
     EMBED = "Embed"
@@ -172,6 +173,9 @@ class PyPandoc(object):
                 elif text.startswith("-"):
                     self.process_list(token)
                     processed = True
+                elif text.startswith("```"):
+                    self.process_pre(token)
+                    processed = True
 
             if not processed:
                 if text.startswith("!["):
@@ -237,6 +241,16 @@ class PyPandoc(object):
         self.endElement(PyPandoc.BREAK)
 
         self._pos = self._pos + len(inner_text)
+
+    def process_pre(self, token):
+        text_end_pos = self._data.find('```',token.end()+1)
+        if text_end_pos >= 0:
+            text = self._data[token.start()+3:text_end_pos]
+
+            self.startElement(PyPandoc.PRE, {'text' : text })
+            self.endElement(PyPandoc.PRE)
+
+            self._pos = text_end_pos + 3
 
     def process_list(self, token):
         if self._list:
@@ -519,6 +533,12 @@ class PyPandoc2Html(PyPandoc):
 
             text = attributes['text']
             data = '<h3>{0}</h3>\n'.format(text)
+            self._fh.write(data.encode("utf-8"))
+
+        elif tag == PyPandoc.PRE:
+
+            text = attributes['text']
+            data = '<pre>{0}</pre>\n'.format(text)
             self._fh.write(data.encode("utf-8"))
 
         elif tag == PyPandoc.LIST:
