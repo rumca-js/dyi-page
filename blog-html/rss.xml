@@ -11,9 +11,7 @@
 <title>First RSS entry</title>
 <link>http://myserver.com/blog-html/index.html</link>
 <guid>index.html</guid>
-$if(description)$
 <description>This is my first RSS entry</description>
-$endif$
 <pubDate>20200821</pubDate>
 </item>
 
