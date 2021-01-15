@@ -6,6 +6,10 @@ __version__ = '0.0.1'
 
 
 def find_matching_bracket(text, bracket_start, bracket_stop, pos=None, end=None):
+    """
+    if matching bracket can be found returns integer id of bracket
+    otherwise returns None
+    """
     stack = [] 
 
     if pos:
@@ -47,6 +51,9 @@ class PyPandoc(object):
     IMAGE = "Image"
     BREAK = "Break"
     PRE = "Pre"
+    BOLD = "Bold"
+    ITALIC = "Italic"
+    BOLD_ITALIC = "BoldItalic"
     CHARACTERS = "char"
     LIST = "List"
     EMBED = "Embed"
@@ -97,6 +104,7 @@ class PyPandoc(object):
             self._prev_pos = self._pos
             self.process_token(token)
             if self._pos == self._prev_pos:
+                print(token.group(0) )
                 print(self._data[self._pos-1])
                 print(self._data[self._pos])
                 print(self._data[self._pos+1])
@@ -159,35 +167,53 @@ class PyPandoc(object):
             processed = False
             if self.is_token_first_in_line(token):
                 if text == "---":
-                    self.process_header(token)
-                    processed = True
+                    if self.process_header(token):
+                        processed = True
                 elif text.startswith("###"):
-                    self.process_headings(token, '###')
-                    processed = True
+                    if self.process_headings(token, '###'):
+                        processed = True
                 elif text.startswith("##"):
-                    self.process_headings(token, '##')
-                    processed = True
+                    if self.process_headings(token, '##'):
+                        processed = True
                 elif text.startswith("#"):
-                    self.process_headings(token, '#')
-                    processed = True
+                    if self.process_headings(token, '#'):
+                        processed = True
                 elif text.startswith("-"):
-                    self.process_list(token)
-                    processed = True
-                elif text.startswith("```"):
-                    self.process_pre(token)
-                    processed = True
+                    if self.process_list(token):
+                        processed = True
 
             if not processed:
                 if text.startswith("!["):
-                    self.process_embed(token, PyPandoc.IMAGE)
+                    if self.process_embed(token, PyPandoc.IMAGE):
+                        processed = True
                 elif text.startswith("$["):
-                    self.process_embed(token, PyPandoc.EMBED)
+                    if self.process_embed(token, PyPandoc.EMBED):
+                        processed = True
                 elif text.startswith("$YT["):
-                    self.process_embed(token, PyPandoc.EMBED_YT)
+                    if self.process_embed(token, PyPandoc.EMBED_YT):
+                        processed = True
                 elif text.startswith("["):
-                    self.process_link(token)
+                    if self.process_link(token):
+                        processed = True
+                elif text.startswith("```"):
+                    if self.process_pre(token):
+                        processed = True
+                elif text.startswith("***"):
+                    if self.process_bold_and_bold(token):
+                        processed = True
+                elif text.startswith("**"):
+                    if self.process_bold(token):
+                        processed = True
+                elif text.startswith("*"):
+                    if self.process_italic(token):
+                        processed = True
                 else:
                     self.process_characters(token)
+                    processed = True
+
+            if not processed:
+                if self.process_characters(token):
+                    processed = True
 
             if not self._header:
                 self.process_whitespaces()
@@ -231,6 +257,7 @@ class PyPandoc(object):
     def process_characters(self, token):
         self.characters(token)
         self._pos = token.end()
+        return True
 
     def process_big_break(self, inner_text):
         if self._list:
@@ -243,7 +270,7 @@ class PyPandoc(object):
         self._pos = self._pos + len(inner_text)
 
     def process_pre(self, token):
-        text_end_pos = self._data.find('```',token.end()+1)
+        text_end_pos = self._data.find('```',token.start()+1)
         if text_end_pos >= 0:
             text = self._data[token.start()+3:text_end_pos]
 
@@ -251,6 +278,52 @@ class PyPandoc(object):
             self.endElement(PyPandoc.PRE)
 
             self._pos = text_end_pos + 3
+
+            return True
+
+        return False
+
+    def process_italic(self, token):
+        text_end_pos = self._data.find('*',token.start()+1)
+        if text_end_pos >= 0:
+            text = self._data[token.start()+1:text_end_pos]
+
+            self.startElement(PyPandoc.ITALIC, {'text' : text })
+            self.endElement(PyPandoc.ITALIC)
+
+            self._pos = text_end_pos + 1
+
+            return True
+
+        return False
+
+    def process_bold(self, token):
+        text_end_pos = self._data.find('**',token.start()+1)
+        if text_end_pos >= 0:
+            text = self._data[token.start()+2:text_end_pos]
+
+            self.startElement(PyPandoc.BOLD, {'text' : text })
+            self.endElement(PyPandoc.BOLD)
+
+            self._pos = text_end_pos + 2
+
+            return True
+
+        return False
+
+    def process_bold_and_bold(self, token):
+        text_end_pos = self._data.find('***',token.start()+1)
+        if text_end_pos >= 0:
+            text = self._data[token.start()+3:text_end_pos]
+
+            self.startElement(PyPandoc.BOLD_ITALIC, {'text' : text })
+            self.endElement(PyPandoc.BOLD_ITALIC)
+
+            self._pos = text_end_pos + 3
+
+            return True
+
+        return False
 
     def process_list(self, token):
         if self._list:
@@ -261,6 +334,8 @@ class PyPandoc(object):
 
         self._pos = token.end()
 
+        return True
+
     def process_embed(self, token, tok_type):
         text = token.group(0)
 
@@ -269,6 +344,9 @@ class PyPandoc(object):
         wh1 = self._data.find("(", wh0)
         wh2 = find_matching_bracket(self._data, "(", ")", wh1)
 
+        if wh2 == None:
+            return False
+
         text = self._data[token.start(0):wh2+1]
         name = self._data[st0+1:wh0]
         link = self._data[wh1+1:wh2]
@@ -276,9 +354,6 @@ class PyPandoc(object):
         text = text.strip()
         name = name.strip()
         link = link.strip()
-
-        if wh2 == -1:
-            raise IOError("Could not find")
 
         self._attr = {}
         self._attr['text'] = text
@@ -293,6 +368,8 @@ class PyPandoc(object):
             self._pos = wh2+1
             end_where = wh2+1
 
+        return True
+
     def process_link(self, token):
         end_where = None
 
@@ -302,6 +379,9 @@ class PyPandoc(object):
         wh1 = self._data.find("(", wh0)
         wh2 = find_matching_bracket(self._data, "(", ")", wh1)
 
+        if wh2 == None:
+            return False
+
         text = self._data[token.start(0):wh2+1]
         name = self._data[token.start(0)+1:wh0]
         link = self._data[wh1+1:wh2]
@@ -309,9 +389,6 @@ class PyPandoc(object):
         text = text.strip()
         name = name.strip()
         link = link.strip()
-
-        if wh2 == -1:
-            raise IOError("Could not find")
 
         self._attr = {}
         self._attr['text'] = text
@@ -330,6 +407,8 @@ class PyPandoc(object):
         if wh2 >= 0:
             self._pos = wh2+1
             end_where = wh2+1
+
+        return True
 
     def process_headings(self, token, level):
         text = token.group(0)
@@ -357,6 +436,8 @@ class PyPandoc(object):
         self.startElement( heading, attributes)
         self.endElement( heading)
 
+        return True
+
     def process_header(self, token):
         text = token.group(0)
 
@@ -379,6 +460,8 @@ class PyPandoc(object):
                     self._pos = end_place
                 else:
                     self._pos = token.end()
+
+        return True
 
     def get_header_key(self, token):
         text = token.group(0)
@@ -539,6 +622,24 @@ class PyPandoc2Html(PyPandoc):
 
             text = attributes['text']
             data = '<pre>{0}</pre>\n'.format(text)
+            self._fh.write(data.encode("utf-8"))
+
+        elif tag == PyPandoc.BOLD:
+
+            text = attributes['text']
+            data = '<strong>{0}</strong>\n'.format(text)
+            self._fh.write(data.encode("utf-8"))
+
+        elif tag == PyPandoc.ITALIC:
+
+            text = attributes['text']
+            data = '<em>{0}</em>\n'.format(text)
+            self._fh.write(data.encode("utf-8"))
+
+        elif tag == PyPandoc.BOLD_ITALIC:
+
+            text = attributes['text']
+            data = '<strong><em>{0}</em></strong>\n'.format(text)
             self._fh.write(data.encode("utf-8"))
 
         elif tag == PyPandoc.LIST:
