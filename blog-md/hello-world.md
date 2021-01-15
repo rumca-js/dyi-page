@@ -14,3 +14,17 @@ categories : [
 [Main page](./index.html)
 
 Hello world!
+
+# Italic test
+
+Hello *World*
+
+Hello **World**
+
+Hello ***World***
+
+``` Preformatted test ```
+
+# End of page
+
+End of page below
