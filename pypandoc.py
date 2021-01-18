@@ -56,6 +56,8 @@ class PyPandoc(object):
     BOLD_ITALIC = "BoldItalic"
     CHARACTERS = "char"
     LIST = "List"
+    LIST_MUL = "ListMul"
+    LIST_PLUS = "ListPlus"
     EMBED = "Embed"
     EMBED_YT = "EmbedYt"
 
@@ -179,6 +181,12 @@ class PyPandoc(object):
                     if self.process_headings(token, '#'):
                         processed = True
                 elif text.startswith("-"):
+                    if self.process_list(token):
+                        processed = True
+                elif text.startswith("*"):
+                    if self.process_list(token):
+                        processed = True
+                elif text.startswith("+"):
                     if self.process_list(token):
                         processed = True
 
@@ -329,7 +337,9 @@ class PyPandoc(object):
         if self._list:
             self.endElement(PyPandoc.LIST)
 
-        self.startElement(PyPandoc.LIST, {'text' : token.group(0) })
+        self.startElement(PyPandoc.LIST, {'text' : token.group(0),
+                                         'list_type': token.group(0)[0] })
+
         self._list = True
 
         self._pos = token.end()
@@ -644,10 +654,23 @@ class PyPandoc2Html(PyPandoc):
 
         elif tag == PyPandoc.LIST:
 
+            list_type = attributes['list_type']
+
             if self._list:
-                data = '</li><li>\n'
+                if list_type == "*":
+                    data = '</li><li class="list-mult">\n'
+                elif list_type == "+":
+                    data = '</li><li class="list-plus">\n'
+                else:
+                    data = '</li><li>\n'
             else:
-                data = '<ul><li>\n'
+                if list_type == "*":
+                    data = '<ul class="list-mult"><li class="list-mult">\n'
+                elif list_type == "+":
+                    data = '<ul class="list-plus"><li class="list-plus">\n'
+                else:
+                    data = '<ul><li>\n'
+
             self._list = True
             self._fh.write(data.encode("utf-8"))
 
