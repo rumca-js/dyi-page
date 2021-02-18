@@ -20,7 +20,7 @@ import zipfile
 import datetime
 import configparser
 
-import pypandoc
+import pymarkdownsax
 
 __version__ = '0.0.1'
 
@@ -73,7 +73,7 @@ class Configuration(object):
         logging.info("Created page configuration file {0}. Please fill in the page details".format(self.config_file))
 
 
-class Pandoc(pypandoc.PyPandoc2Html):
+class MarkDownSax(pymarkdownsax.PyMarkDownSax2Html):
 
     def __init__(self, mdfile, htmlfile):
         super().__init__()
@@ -113,7 +113,7 @@ class Pandoc(pypandoc.PyPandoc2Html):
     def get_html_footer(self):
         data = "</p><p id=\"footer\">"
         data += "Generated using dyi-page {0}<br/>".format(__version__)
-        data += "Generated using pypandoc {0}<br/>".format(pypandoc.__version__)
+        data += "Generated using pymarkdownsax {0}<br/>".format(pymarkdownsax.pymarkdownsax.__version__)
         data += "</p></body>\n</html>"
         return data
 
@@ -133,7 +133,7 @@ class Pandoc(pypandoc.PyPandoc2Html):
             temp.write(self._htmlfile)
 
 
-class MdFile(pypandoc.PyPandocDom):
+class MdFile(pymarkdownsax.PyMarkDownSaxDom):
 
     def __init__(self, mdfile):
         super().__init__(mdfile, True)
@@ -283,7 +283,7 @@ class RssFileCreator(object):
         files = sorted(files)
 
         for afile in files:
-            pan = Pandoc( afile, afile+'.xml')
+            pan = MarkDownSax( afile, afile+'.xml')
             pan.rss_generate()
 
     def remove_xml_entries(self):
@@ -333,7 +333,7 @@ def process_file(afile, use_pandoc):
             htmlfile = mdobj.get_html_file_name()
             logging.info("Converting {0} to {1}".format(mdfile, htmlfile))
 
-            pan = Pandoc(mdfile, htmlfile)
+            pan = MarkDownSax(mdfile, htmlfile)
             pan.use_pandoc(use_pandoc)
             pan.convert()
         else:
