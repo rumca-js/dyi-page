@@ -1,6 +1,6 @@
 ---
 title: myserver - blog
-date: 2021-01-15 13:42:21
+date: 2021-02-18 16:07:27
 draft: false
 description : "$PAGE_DESCRIPTION"
 ---
@@ -11,7 +11,7 @@ This is a Hello World WebPage.
 
 # Entries:
 
- - [Hello World](./hello-world.html)
+ * [Hello World](./hello-world.html)
 
 
 # Goodbye!

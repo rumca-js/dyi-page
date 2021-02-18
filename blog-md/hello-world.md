@@ -25,6 +25,12 @@ Hello ***World***
 
 ``` Preformatted test ```
 
+Line below
+
+-----
+
+`This is code`
+
 # End of page
 
 End of page below

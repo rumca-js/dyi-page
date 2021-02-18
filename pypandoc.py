@@ -50,21 +50,23 @@ class PyPandoc(object):
     LINK = "Link"
     IMAGE = "Image"
     BREAK = "Break"
+    CODE = "Code"
     PRE = "Pre"
+    HR = "Hr"
     BOLD = "Bold"
     ITALIC = "Italic"
     BOLD_ITALIC = "BoldItalic"
     CHARACTERS = "char"
     LIST = "List"
-    LIST_MUL = "ListMul"
-    LIST_PLUS = "ListPlus"
     EMBED = "Embed"
     EMBED_YT = "EmbedYt"
 
     def __init__(self, file_name = None):
         self._file_name = file_name
 
-        self._header = False
+        self._header = True
+        self._header_cnt = 0
+
         self._list = False
         self._stop = False
 
@@ -104,7 +106,12 @@ class PyPandoc(object):
                 break
 
             self._prev_pos = self._pos
-            self.process_token(token)
+
+            if self._header:
+                self.process_header(token)
+            else:
+                self.process_token(token)
+
             if self._pos == self._prev_pos:
                 print(token.group(0) )
                 print(self._data[self._pos-1])
@@ -139,14 +146,43 @@ class PyPandoc(object):
 
             return obj
 
+    def is_new_line_between_tokens(self, token_one, token_two):
+        text = self._data[token_one.end(0) : token_two.start(0)]
+        if text.find("\n") != -1:
+            return True
+        return False
+
     def is_token_first_in_line(self, token):
         prev_token = self.prev_token()
 
         if self._pos == 0:
             return True
 
-        text = self._data[prev_token.start(0) : token.start(0)]
-        if text.find("\n") != -1:
+        return self.is_new_line_between_tokens(prev_token, token)
+
+    def is_token_alone_in_line(self, token):
+        prev_token = self.prev_token()
+        next_token = self.read_token(len(token.group()) )
+
+        if self._pos == 0:
+            return True
+
+        prev_new_line = self.is_new_line_between_tokens(prev_token, token)
+
+        if next_token:
+            next_new_line = self.is_new_line_between_tokens(token, next_token)
+        else:
+            next_new_line = True
+
+        if prev_new_line and next_new_line:
+            return True
+        else:
+            return False
+
+    def is_token_only_char(self, token, achar):
+        text = set(token.group())
+        allowed_chars = set(achar)
+        if text.issubset(allowed_chars):
             return True
         return False
 
@@ -154,93 +190,88 @@ class PyPandoc(object):
         if token.end(0) > self._pos:
             self._pos = token.end(0)
 
+    def process_header(self, token):
+        if self.process_header_token(token):
+            self._header = False
+
+        if not self._header:
+            self.process_whitespaces()
+
     def process_token(self, token):
         text = token.group(0)
 
-        #print("'{0}'".format(text))
+        processed = False
 
-        if self._header:
-            self.process_header(token)
-
-            if not self._header:
-                self.process_whitespaces()
-        else:
-            #print("Token: "+text)
-            processed = False
-            if self.is_token_first_in_line(token):
-                if text == "---":
-                    if self.process_header(token):
-                        processed = True
-                elif text.startswith("###"):
-                    if self.process_headings(token, '###'):
-                        processed = True
-                elif text.startswith("##"):
-                    if self.process_headings(token, '##'):
-                        processed = True
-                elif text.startswith("#"):
-                    if self.process_headings(token, '#'):
-                        processed = True
-                elif text.startswith("-"):
-                    if self.process_list(token):
-                        processed = True
-                elif text.startswith("*"):
-                    if self.process_list(token):
-                        processed = True
-                elif text.startswith("+"):
-                    if self.process_list(token):
-                        processed = True
-
-            if not processed:
-                if text.startswith("!["):
-                    if self.process_embed(token, PyPandoc.IMAGE):
-                        processed = True
-                elif text.startswith("$["):
-                    if self.process_embed(token, PyPandoc.EMBED):
-                        processed = True
-                elif text.startswith("$YT["):
-                    if self.process_embed(token, PyPandoc.EMBED_YT):
-                        processed = True
-                elif text.startswith("["):
-                    if self.process_link(token):
-                        processed = True
-                elif text.startswith("```"):
-                    if self.process_pre(token):
-                        processed = True
-                elif text.startswith("***"):
-                    if self.process_bold_and_bold(token):
-                        processed = True
-                elif text.startswith("**"):
-                    if self.process_bold(token):
-                        processed = True
-                elif text.startswith("*"):
-                    if self.process_italic(token):
-                        processed = True
-                else:
-                    self.process_characters(token)
+        if self.is_token_alone_in_line(token):
+            if len(token.group()) >= 3:
+                if self.is_token_only_char(token, '#'):
+                    self.process_hr(token, "#")
+                    processed = True
+                elif self.is_token_only_char(token, '-'):
+                    self.process_hr(token, "-")
+                    processed = True
+                elif self.is_token_only_char(token, '*'):
+                    self.process_hr(token, "*")
                     processed = True
 
-            if not processed:
-                if self.process_characters(token):
+        if self.is_token_first_in_line(token):
+            if text.startswith("###"):
+                if self.process_headings(token, '###'):
+                    processed = True
+            elif text.startswith("##"):
+                if self.process_headings(token, '##'):
+                    processed = True
+            elif text.startswith("#"):
+                if self.process_headings(token, '#'):
+                    processed = True
+            elif text.startswith("-"):
+                if self.process_list(token):
+                    processed = True
+            elif text.startswith("*"):
+                if self.process_list(token):
+                    processed = True
+            elif text.startswith("+"):
+                if self.process_list(token):
                     processed = True
 
-            if not self._header:
-                self.process_whitespaces()
+        if not processed:
+            if text.startswith("!["):
+                if self.process_embed(token, PyPandoc.IMAGE):
+                    processed = True
+            elif text.startswith("$["):
+                if self.process_embed(token, PyPandoc.EMBED):
+                    processed = True
+            elif text.startswith("$YT["):
+                if self.process_embed(token, PyPandoc.EMBED_YT):
+                    processed = True
+            elif text.startswith("["):
+                if self.process_link(token):
+                    processed = True
+            elif text.startswith("```"):
+                if self.process_enclosed_token(token, "```", PyPandoc.PRE):
+                    processed = True
+            elif text.startswith("`"):
+                if self.process_enclosed_token(token, "`", PyPandoc.CODE):
+                    processed = True
+            elif text.startswith("***"):
+                if self.process_enclosed_token(token, "***", PyPandoc.BOLD_ITALIC):
+                    processed = True
+            elif text.startswith("**"):
+                if self.process_enclosed_token(token, "**", PyPandoc.BOLD):
+                    processed = True
+            elif text.startswith("*"):
+                if self.process_enclosed_token(token, "*", PyPandoc.ITALIC):
+                    processed = True
+            else:
+                self.process_characters(token)
+                processed = True
 
-    def process_whitespaces_s(self):
-        next_token = self.read_token()
-        if next_token:
-            leng = next_token.start()-self._pos
-            if leng > 0:
-                inner = self._data[self._pos:next_token.start()]
+        if not processed:
+            if self.process_characters(token):
+                processed = True
 
-                if inner.find("\n\n") >= 0:
-                    self.process_big_break(inner)
-        else:
-            leng = len(self._data)-self._pos
-            if leng > 0:
-                inner = self._data[self._pos:]
-                if inner.find("\n\n") >= 0:
-                    self.process_big_break(inner)
+        if not self._header:
+            self.process_whitespaces()
 
     def process_whitespaces(self):
         next_token = self.read_token()
@@ -277,61 +308,25 @@ class PyPandoc(object):
 
         self._pos = self._pos + len(inner_text)
 
-    def process_pre(self, token):
-        text_end_pos = self._data.find('```',token.start()+1)
+    def process_enclosed_token(self, token, text, code):
+        text_end_pos = self._data.find(text,token.start()+len(text) )
         if text_end_pos >= 0:
-            text = self._data[token.start()+3:text_end_pos]
+            token_text = self._data[token.start()+len(text):text_end_pos]
 
-            self.startElement(PyPandoc.PRE, {'text' : text })
-            self.endElement(PyPandoc.PRE)
+            self.startElement(code, {'text' : token_text })
+            self.endElement(code)
 
-            self._pos = text_end_pos + 3
+            self._pos = text_end_pos + len(text)
 
             return True
 
         return False
 
-    def process_italic(self, token):
-        text_end_pos = self._data.find('*',token.start()+1)
-        if text_end_pos >= 0:
-            text = self._data[token.start()+1:text_end_pos]
+    def process_hr(self, token, text):
+        self.startElement(PyPandoc.HR, {'text' : token.group()})
+        self.endElement(PyPandoc.HR)
 
-            self.startElement(PyPandoc.ITALIC, {'text' : text })
-            self.endElement(PyPandoc.ITALIC)
-
-            self._pos = text_end_pos + 1
-
-            return True
-
-        return False
-
-    def process_bold(self, token):
-        text_end_pos = self._data.find('**',token.start()+1)
-        if text_end_pos >= 0:
-            text = self._data[token.start()+2:text_end_pos]
-
-            self.startElement(PyPandoc.BOLD, {'text' : text })
-            self.endElement(PyPandoc.BOLD)
-
-            self._pos = text_end_pos + 2
-
-            return True
-
-        return False
-
-    def process_bold_and_bold(self, token):
-        text_end_pos = self._data.find('***',token.start()+1)
-        if text_end_pos >= 0:
-            text = self._data[token.start()+3:text_end_pos]
-
-            self.startElement(PyPandoc.BOLD_ITALIC, {'text' : text })
-            self.endElement(PyPandoc.BOLD_ITALIC)
-
-            self._pos = text_end_pos + 3
-
-            return True
-
-        return False
+        self._pos = token.end()
 
     def process_list(self, token):
         if self._list:
@@ -448,30 +443,29 @@ class PyPandoc(object):
 
         return True
 
-    def process_header(self, token):
+    def process_header_token(self, token):
         text = token.group(0)
 
-        if not self._header:
-            if text == "---":
-                self._header = True
+        if text == "---":
+            self._header_cnt += 1
+
+        if text == "---" and self._header_cnt > 1:
+            self.startElement(PyPandoc.HEADER, self._attr)
+            self.endElement(PyPandoc.HEADER)
+            self._header = False
             self._pos = token.end()
+            return True
         else:
-            if text == "---":
-                self.startElement(PyPandoc.HEADER, self._attr)
-                self.endElement(PyPandoc.HEADER)
-                self._header = False
-                self._pos = token.end()
+            if self.is_token_first_in_line(token):
+                key = self.get_header_key(token)
+                value, end_place = self.get_header_value(token)
+
+                self._attr[key] = value
+                self._pos = end_place
             else:
-                if self.is_token_first_in_line(token):
-                    key = self.get_header_key(token)
-                    value, end_place = self.get_header_value(token)
+                self._pos = token.end()
 
-                    self._attr[key] = value
-                    self._pos = end_place
-                else:
-                    self._pos = token.end()
-
-        return True
+        return False
 
     def get_header_key(self, token):
         text = token.group(0)
@@ -634,6 +628,12 @@ class PyPandoc2Html(PyPandoc):
             data = '<pre>{0}</pre>\n'.format(text)
             self._fh.write(data.encode("utf-8"))
 
+        elif tag == PyPandoc.CODE:
+
+            text = attributes['text']
+            data = '<code>{0}</code>\n'.format(text)
+            self._fh.write(data.encode("utf-8"))
+
         elif tag == PyPandoc.BOLD:
 
             text = attributes['text']
@@ -650,6 +650,12 @@ class PyPandoc2Html(PyPandoc):
 
             text = attributes['text']
             data = '<strong><em>{0}</em></strong>\n'.format(text)
+            self._fh.write(data.encode("utf-8"))
+
+        elif tag == PyPandoc.HR:
+
+            text = attributes['text']
+            data = '<hr>\n'
             self._fh.write(data.encode("utf-8"))
 
         elif tag == PyPandoc.LIST:

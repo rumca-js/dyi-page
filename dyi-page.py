@@ -218,13 +218,13 @@ class MdFileTemplate(TemplateFile):
 
         file_entries = ""
         for key, mdobj in enumerate(self.pages):
-            if not mdobj.is_index():
+            if not mdobj.is_index() and mdobj.header['draft'] == "false":
                 title = mdobj.header["title"]
                 updated = mdobj.header["date"]
 
                 html_file_name = os.path.split(mdobj.get_html_file_name())[1]
 
-                file_entries += " - [{0}](./{1})\n".format(title, html_file_name, updated)
+                file_entries += " * [{0}](./{1})\n".format(title, html_file_name, updated)
 
         self.keys["FILE_ENTRIES"] = file_entries
 
@@ -235,7 +235,7 @@ class MdFileTemplate(TemplateFile):
                 title = title[3:]
 
             html_file_name = os.path.join(adir, "index.html")
-            dir_entries += " - [{0}](./{1})\n".format(title, html_file_name)
+            dir_entries += " * [{0}](./{1})\n".format(title, html_file_name)
 
         self.keys["DIR_ENTRIES"] = dir_entries
 
